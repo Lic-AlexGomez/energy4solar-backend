@@ -12,7 +12,6 @@ export async function importCommissionsAction(formData: FormData) {
   const text = await file.text()
   const result = await commissionService.importCsv(text)
   revalidatePath("/admin/commissions")
-  revalidatePath("/admin/earnings")
   return result
 }
 
@@ -20,5 +19,4 @@ export async function clearCommissionsAction() {
   const { prisma } = await import("@/lib/prisma")
   await prisma.commissionRecord.deleteMany()
   revalidatePath("/admin/commissions")
-  revalidatePath("/admin/earnings")
 }

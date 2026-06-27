@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { commissionService } from "@/modules/admin/commission.service"
 import { StatCard } from "../../components/stat-card"
 import { clearCommissionsAction } from "./actions"
@@ -10,63 +9,84 @@ function money(n: number) {
 
 export default async function AdminCommissionsPage() {
   const data = await commissionService.getDashboard()
+  const maxMonth = Math.max(...data.byMonth.map((m) => m.total), 1)
 
   return (
     <div>
       <div className="admin-page-header">
         <div>
-          <h1 className="admin-page-title">Commissions</h1>
+          <h1 className="admin-page-title">My commissions</h1>
           <p className="admin-subtitle">
-            Import real payout data from your BigBattery or affiliate network CSV export.
+            Your real affiliate payouts from BigBattery. Import a CSV export from your affiliate portal to track
+            earnings here.
           </p>
         </div>
         {data.totalRecords > 0 ? (
           <form action={clearCommissionsAction}>
             <button type="submit" className="admin-btn admin-btn-secondary">
-              Clear all imports
+              Clear all
             </button>
           </form>
         ) : null}
       </div>
 
       <div className="admin-stats">
-        <StatCard label="Total imported" value={money(data.totalAmount)} sub={`${data.totalRecords} records`} accent />
-        <StatCard label="Paid / approved" value={money(data.paidAmount)} />
+        <StatCard label="Total earned" value={money(data.totalAmount)} sub={`${data.totalRecords} orders`} accent />
+        <StatCard label="Paid" value={money(data.paidAmount)} />
         <StatCard label="Pending" value={money(data.pendingAmount)} />
         <StatCard label="Last 30 days" value={money(data.last30Amount)} />
       </div>
 
       <CsvUploadForm />
 
-      {data.byMonth.length ? (
-        <section className="admin-panel admin-section">
-          <h2>By month</h2>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Commission</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.byMonth.map((m) => (
-                <tr key={m.month}>
-                  <td>{m.month}</td>
-                  <td className="admin-money">{money(m.total)}</td>
-                </tr>
+      <div className="admin-grid-2">
+        {data.byMonth.length ? (
+          <section className="admin-panel">
+            <h2>By month</h2>
+            <div className="admin-chart" style={{ marginTop: "1rem" }}>
+              {[...data.byMonth].reverse().map((m) => (
+                <div key={m.month} className="admin-chart-row">
+                  <span className="admin-chart-label">{m.month}</span>
+                  <div className="admin-chart-bar-wrap">
+                    <div
+                      className="admin-chart-bar"
+                      style={{ width: `${Math.round((m.total / maxMonth) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="admin-chart-value admin-money">{money(m.total)}</span>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </section>
-      ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {data.topProducts.length ? (
+          <section className="admin-panel">
+            <h2>Top products</h2>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Orders</th>
+                  <th>Commission</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.topProducts.map((p) => (
+                  <tr key={p.name}>
+                    <td>{p.name}</td>
+                    <td>{p.orders}</td>
+                    <td className="admin-money">{money(p.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ) : null}
+      </div>
 
       <section className="admin-panel admin-section">
-        <div className="admin-panel-header">
-          <h2>Recent imports</h2>
-          <Link href="/admin/earnings" className="admin-link-sm">
-            Earnings overview →
-          </Link>
-        </div>
+        <h2>All commission records</h2>
         <table className="admin-table">
           <thead>
             <tr>
@@ -74,7 +94,6 @@ export default async function AdminCommissionsPage() {
               <th>Amount</th>
               <th>Status</th>
               <th>Order date</th>
-              <th>Imported</th>
             </tr>
           </thead>
           <tbody>
@@ -85,13 +104,12 @@ export default async function AdminCommissionsPage() {
                   <td className="admin-money">{money(r.amount)}</td>
                   <td>{r.status}</td>
                   <td>{r.orderDate}</td>
-                  <td>{r.importedAt}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="admin-empty">
-                  No commission data yet. Upload a CSV from your affiliate dashboard.
+                <td colSpan={4} className="admin-empty">
+                  No commissions yet. Upload a CSV from your BigBattery affiliate dashboard.
                 </td>
               </tr>
             )}

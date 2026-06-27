@@ -112,7 +112,7 @@ export const commissionService = {
   },
 
   async getDashboard() {
-    const [total, paid, pending, last30, byMonth, recent] = await Promise.all([
+    const [total, paid, pending, last30, byMonth, recent, topProducts] = await Promise.all([
       prisma.commissionRecord.aggregate({ _sum: { amount: true }, _count: true }),
       prisma.commissionRecord.aggregate({
         where: { status: { in: ["paid", "approved", "completed"] } },
@@ -138,6 +138,15 @@ export const commissionService = {
         orderBy: { importedAt: "desc" },
         take: 20,
       }),
+      prisma.$queryRaw<{ name: string; total: unknown; orders: bigint }[]>`
+        SELECT COALESCE(NULLIF("productName", ''), NULLIF(sku, ''), 'Unknown') AS name,
+               SUM(amount) AS total,
+               COUNT(*)::bigint AS orders
+        FROM energy4solar."CommissionRecord"
+        GROUP BY 1
+        ORDER BY 2 DESC
+        LIMIT 10
+      `,
     ])
 
     return {
@@ -149,6 +158,11 @@ export const commissionService = {
       byMonth: byMonth.map((m) => ({
         month: new Date(m.month).toISOString().slice(0, 7),
         total: Number(m.total),
+      })),
+      topProducts: topProducts.map((p) => ({
+        name: p.name,
+        total: Number(p.total),
+        orders: Number(p.orders),
       })),
       recent: recent.map((r) => ({
         id: r.id,

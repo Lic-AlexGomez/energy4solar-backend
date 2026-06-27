@@ -1,41 +1,34 @@
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { StatCard } from "../components/stat-card"
-import { earningsService } from "@/modules/admin/earnings.service"
+import { commissionService } from "@/modules/admin/commission.service"
 
 function money(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n)
 }
 
 export default async function AdminOverviewPage() {
-  const [productCount, visibleCount, withImages, clickCount, categoryCount, guideCount, blogCount, lastSync, earnings] =
+  const [productCount, visibleCount, withImages, categoryCount, guideCount, blogCount, lastSync, commissions] =
     await Promise.all([
       prisma.product.count(),
       prisma.product.count({ where: { isVisible: true } }),
       prisma.product.count({ where: { images: { some: {} } } }),
-      prisma.affiliateClick.count(),
       prisma.category.count(),
       prisma.guide.count({ where: { published: true } }),
       prisma.blogPost.count({ where: { published: true } }),
       prisma.syncLog.findFirst({ orderBy: { startedAt: "desc" } }),
-      earningsService.getDashboard(),
+      commissionService.getDashboard(),
     ])
 
   const hidden = productCount - visibleCount
   const imagePct = productCount ? Math.round((withImages / productCount) * 100) : 0
-
-  const recentClicks = await prisma.affiliateClick.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 8,
-    include: { product: { select: { name: true } } },
-  })
 
   return (
     <div>
       <div className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Dashboard</h1>
-          <p className="admin-subtitle">Catalog health, affiliate performance, and quick actions.</p>
+          <p className="admin-subtitle">Catalog, content, and your affiliate commissions.</p>
         </div>
         <Link href="/admin/sync" className="admin-btn">
           Force sync
@@ -43,13 +36,16 @@ export default async function AdminOverviewPage() {
       </div>
 
       <div className="admin-stats">
+        <StatCard
+          label="My commissions"
+          value={money(commissions.totalAmount)}
+          sub={`${commissions.totalRecords} orders · ${money(commissions.last30Amount)} last 30d`}
+          accent
+        />
+        <StatCard label="Paid" value={money(commissions.paidAmount)} />
+        <StatCard label="Pending" value={money(commissions.pendingAmount)} />
         <StatCard label="Visible products" value={visibleCount} sub={`${hidden} hidden`} />
         <StatCard label="Image coverage" value={`${imagePct}%`} sub={`${withImages} / ${productCount}`} />
-        <StatCard label="Affiliate clicks" value={clickCount} sub={`${earnings.clicks7d} last 7 days`} />
-        <StatCard label="Est. commission (30d)" value={money(earnings.estCommission30d)} accent />
-        <StatCard label="Actual commissions" value={money(earnings.actual.total)} sub={`${earnings.actual.records} CSV rows`} />
-        <StatCard label="Published guides" value={guideCount} />
-        <StatCard label="Blog articles" value={blogCount} />
         <StatCard
           label="Last Zoho sync"
           value={lastSync?.status ?? "—"}
@@ -63,17 +59,14 @@ export default async function AdminOverviewPage() {
             <h2>Quick actions</h2>
           </div>
           <div className="admin-actions">
-            <Link href="/admin/products" className="admin-btn">
-              Manage products
+            <Link href="/admin/commissions" className="admin-btn">
+              Import commissions
             </Link>
-            <Link href="/admin/earnings" className="admin-btn admin-btn-secondary">
-              View earnings
+            <Link href="/admin/products" className="admin-btn admin-btn-secondary">
+              Products
             </Link>
             <Link href="/admin/blog" className="admin-btn admin-btn-secondary">
               Blog
-            </Link>
-            <Link href="/admin/commissions" className="admin-btn admin-btn-secondary">
-              Commissions
             </Link>
             <Link href="/admin/analytics" className="admin-btn admin-btn-secondary">
               Analytics
@@ -83,21 +76,23 @@ export default async function AdminOverviewPage() {
 
         <section className="admin-panel">
           <div className="admin-panel-header">
-            <h2>Recent affiliate clicks</h2>
-            <Link href="/admin/analytics" className="admin-link-sm">
+            <h2>Recent commissions</h2>
+            <Link href="/admin/commissions" className="admin-link-sm">
               View all
             </Link>
           </div>
           <ul className="admin-activity-list">
-            {recentClicks.length ? (
-              recentClicks.map((c) => (
+            {commissions.recent.length ? (
+              commissions.recent.slice(0, 8).map((c) => (
                 <li key={c.id}>
-                  <span className="admin-activity-title">{c.product.name}</span>
-                  <span className="admin-activity-meta">{c.createdAt.toLocaleString()}</span>
+                  <span className="admin-activity-title">{c.productName}</span>
+                  <span className="admin-activity-meta admin-money">{money(c.amount)}</span>
                 </li>
               ))
             ) : (
-              <li className="admin-empty">No clicks recorded yet.</li>
+              <li className="admin-empty">
+                Upload a CSV from BigBattery to see your commissions here.
+              </li>
             )}
           </ul>
         </section>

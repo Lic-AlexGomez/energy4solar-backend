@@ -11,10 +11,10 @@ export function CsvUploadForm() {
 
   return (
     <div className="admin-panel">
-      <h2>Import BigBattery / affiliate CSV</h2>
+      <h2>Import your commission CSV</h2>
       <p className="admin-subtitle" style={{ marginTop: "0.5rem" }}>
-        Supported columns: commission, amount, order_date, sku, product_name, order_id, status (flexible
-        header names).
+        Export from your BigBattery affiliate portal and upload here. Columns: commission, amount, order_date, sku,
+        product_name, order_id, status.
       </p>
       <form
         className="admin-upload-form"

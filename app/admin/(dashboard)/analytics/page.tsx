@@ -27,10 +27,10 @@ export default async function AdminAnalyticsPage() {
       <div className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Analytics</h1>
-          <p className="admin-subtitle">Affiliate click tracking and referrer data.</p>
+          <p className="admin-subtitle">Affiliate click tracking and referrer data (traffic only).</p>
         </div>
-        <Link href="/admin/earnings" className="admin-btn admin-btn-secondary">
-          Earnings estimates →
+        <Link href="/admin/commissions" className="admin-btn admin-btn-secondary">
+          My commissions →
         </Link>
       </div>
 
