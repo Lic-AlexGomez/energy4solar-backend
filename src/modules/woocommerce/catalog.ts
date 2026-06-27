@@ -115,14 +115,82 @@ export function skuLookupVariants(sku: string): string[] {
   const base = normalizeSku(sku)
   const variants = new Set<string>([base])
 
+  // Refurb / warehouse prefixes in Zoho
+  for (const prefix of ["RF-", "RHWK-", "REF-"]) {
+    if (base.startsWith(prefix)) variants.add(base.slice(prefix.length))
+  }
+
   // Refurb / grade suffixes common in Zoho SKUs
-  for (const suffix of ["-PWR-B", "-PWR-A", "-G2-B", "-G2-A", "-G1-B", "-G1-A", "-B", "-A"]) {
+  for (const suffix of [
+    "-INV-B",
+    "-INV-A",
+    "-PWR-B",
+    "-PWR-A",
+    "-G2-INV",
+    "-G2-B",
+    "-G2-A",
+    "-G1-B",
+    "-G1-A",
+    "-B",
+    "-A",
+  ]) {
     if (base.endsWith(suffix)) {
       variants.add(base.slice(0, -suffix.length))
     }
   }
 
   return [...variants]
+}
+
+export async function searchStoreProducts(query: string): Promise<WooStoreProduct[]> {
+  const q = query.trim()
+  if (q.length < 3) return []
+  const base = getEnv().WOO_STORE_URL.replace(/\/$/, "")
+  const url = `${base}/wp-json/wc/store/v1/products?search=${encodeURIComponent(q)}&per_page=5`
+  const res = await fetch(url, {
+    headers: { Accept: "application/json", "User-Agent": "Energy4Solar-Sync/1.0" },
+    next: { revalidate: 0 },
+  })
+  if (!res.ok) return []
+  const data = (await res.json()) as WooStoreProduct[]
+  return Array.isArray(data) ? data : []
+}
+
+export async function lookupCatalogEntryWithSearch(
+  catalog: WooImageCatalog,
+  sku?: string,
+): Promise<WooCatalogEntry | null> {
+  const direct = lookupCatalogEntry(catalog, sku)
+  if (direct?.images.length) return direct
+  if (!sku?.trim()) return direct
+
+  const variants = skuLookupVariants(sku)
+  for (const variant of variants) {
+    if (variant.length < 4) continue
+    try {
+      const results = await searchStoreProducts(variant)
+      for (const product of results) {
+        if (!product.images?.length) continue
+        const productSku = normalizeSku(product.sku ?? "")
+        const matches = variants.some(
+          (v) =>
+            productSku === v ||
+            productSku.startsWith(v) ||
+            v.startsWith(productSku) ||
+            v.includes(productSku) ||
+            productSku.includes(v.replace(/^(RF-|RHWK-|REF-)/, "")),
+        )
+        if (matches) return entryFromStoreProduct(product)
+      }
+      // Refurb SKUs: use best search hit for the same model family
+      const best = results.find((p) => p.images?.length)
+      if (best && variant.length >= 8) return entryFromStoreProduct(best)
+    } catch {
+      /* try next variant */
+    }
+  }
+
+  return direct
 }
 
 export function lookupCatalogEntry(catalog: WooImageCatalog, sku?: string): WooCatalogEntry | null {
