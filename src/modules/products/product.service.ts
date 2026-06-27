@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { NotFoundError } from "@/lib/errors"
 import type { Prisma } from "@prisma/client"
+import { getEffectiveAffiliateUrl } from "@/lib/affiliate-url"
 
 const productInclude = {
   brand: true,
@@ -36,7 +37,7 @@ export function serializeProduct(p: ProductWithRelations) {
     description: p.description,
     shortDescription: p.shortDescription,
     badge: p.badge ?? undefined,
-    affiliateUrl: p.affiliateUrl,
+    affiliateUrl: getEffectiveAffiliateUrl(p),
     manufacturerUrl: p.manufacturerUrl ?? undefined,
     specs: p.specifications.map((s) => ({ label: s.label, value: s.value })),
     features: p.features.map((f) => f.text),
@@ -83,7 +84,7 @@ export const productService = {
     maxPrice?: number
   }) {
     const limit = Math.min(params.limit ?? 24, 100)
-    const where: Prisma.ProductWhereInput = {}
+    const where: Prisma.ProductWhereInput = { isVisible: true }
     if (params.category) where.category = { slug: params.category }
     if (params.brand) where.brand = { slug: params.brand }
     if (params.inStock != null) where.inStock = params.inStock
@@ -123,8 +124,8 @@ export const productService = {
   },
 
   async getBySlug(slug: string) {
-    const product = await prisma.product.findUnique({
-      where: { slug },
+    const product = await prisma.product.findFirst({
+      where: { slug, isVisible: true },
       include: productInclude,
     })
     if (!product) throw new NotFoundError("Product not found")
@@ -133,7 +134,7 @@ export const productService = {
 
   async compare(ids: string[]) {
     const products = await prisma.product.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, isVisible: true },
       include: productInclude,
     })
     return products.map(serializeProduct)
@@ -148,6 +149,9 @@ export const productService = {
       take: limit,
       include: { product: { include: productInclude } },
     })
-    return items.map((i) => serializeProduct(i.product))
+    return items
+      .map((i) => i.product)
+      .filter((p) => p.isVisible)
+      .map((p) => serializeProduct(p))
   },
 }

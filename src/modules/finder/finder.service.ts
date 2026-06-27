@@ -25,6 +25,7 @@ export const finderService = {
     const products = await prisma.product.findMany({
       where: {
         inStock: true,
+        isVisible: true,
         ...(input.application ? { compatibility: { has: input.application } } : {}),
         ...(input.budget ? { price: { lte: input.budget } } : {}),
       },

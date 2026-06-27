@@ -1,57 +1,59 @@
 import { prisma } from "@/lib/prisma"
 import { saveGuideAction } from "./actions"
+import { GuideList } from "./guide-list"
 
 export default async function AdminGuidesPage() {
   const guides = await prisma.guide.findMany({ orderBy: { updatedAt: "desc" } })
+  const published = guides.filter((g) => g.published).length
 
   return (
     <div>
-      <h1>Buying guides</h1>
-      <p style={{ color: "#94a3b8" }}>Editorial content managed here. Products stay synced from Zoho.</p>
+      <div className="admin-page-header">
+        <div>
+          <h1 className="admin-page-title">Guides & articles</h1>
+          <p className="admin-subtitle">
+            Editorial buying guides. Toggle visibility without deleting content.
+          </p>
+        </div>
+        <span className="admin-badge admin-badge-muted">
+          {published} / {guides.length} published
+        </span>
+      </div>
 
-      <form action={saveGuideAction} style={{ marginTop: "2rem", display: "grid", gap: "0.75rem", maxWidth: 640 }}>
-        <h2>New guide</h2>
-        <input name="title" placeholder="Title" required style={inputStyle} />
-        <input name="excerpt" placeholder="Excerpt" required style={inputStyle} />
-        <textarea name="content" placeholder="Markdown content" required rows={8} style={inputStyle} />
-        <label>
-          <input type="checkbox" name="published" /> Publish
-        </label>
-        <button type="submit" style={buttonStyle}>
-          Create guide
-        </button>
-      </form>
+      <GuideList
+        guides={guides.map((g) => ({
+          id: g.id,
+          title: g.title,
+          slug: g.slug,
+          published: g.published,
+          updatedAt: g.updatedAt,
+        }))}
+      />
 
-      <section style={{ marginTop: "3rem" }}>
-        <h2>Existing guides ({guides.length})</h2>
-        <ul style={{ marginTop: "1rem", lineHeight: 1.8 }}>
-          {guides.map((g) => (
-            <li key={g.id}>
-              {g.published ? "✓" : "○"} {g.title}{" "}
-              <span style={{ color: "#64748b" }}>/api/guides/{g.slug}</span>
-            </li>
-          ))}
-        </ul>
+      <section className="admin-panel admin-section">
+        <h2>Create new guide</h2>
+        <form action={saveGuideAction} className="admin-form admin-form-wide">
+          <label>
+            Title
+            <input name="title" placeholder="How to size a home battery" required />
+          </label>
+          <label>
+            Excerpt
+            <input name="excerpt" placeholder="Short summary for cards and SEO" required />
+          </label>
+          <label>
+            Content (Markdown)
+            <textarea name="content" placeholder="# Guide title..." required rows={10} />
+          </label>
+          <label className="admin-checkbox">
+            <input type="checkbox" name="published" />
+            Publish immediately
+          </label>
+          <button type="submit" className="admin-btn">
+            Create guide
+          </button>
+        </form>
       </section>
     </div>
   )
-}
-
-const inputStyle: React.CSSProperties = {
-  padding: "0.75rem",
-  borderRadius: 8,
-  border: "1px solid #334155",
-  background: "#1e293b",
-  color: "#fff",
-}
-
-const buttonStyle: React.CSSProperties = {
-  padding: "0.75rem",
-  borderRadius: 8,
-  border: "none",
-  background: "#22c55e",
-  color: "#052e16",
-  fontWeight: 600,
-  cursor: "pointer",
-  width: "fit-content",
 }

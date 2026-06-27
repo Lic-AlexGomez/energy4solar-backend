@@ -108,7 +108,7 @@ async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Prom
 
   const existing = await prisma.product.findUnique({
     where: { zohoItemId: mapped.zohoItemId },
-    select: { id: true, price: true, slug: true },
+    select: { id: true, price: true, slug: true, affiliateUrlOverride: true },
   })
 
   const slug =
@@ -205,14 +205,15 @@ async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Prom
   const existingLink = await prisma.affiliateLink.findFirst({
     where: { productId: product.id, isPrimary: true },
   })
+  const linkUrl = existing?.affiliateUrlOverride ?? mapped.affiliateUrl
   if (existingLink) {
     await prisma.affiliateLink.update({
       where: { id: existingLink.id },
-      data: { url: mapped.affiliateUrl },
+      data: { url: linkUrl },
     })
   } else {
     await prisma.affiliateLink.create({
-      data: { productId: product.id, url: mapped.affiliateUrl, isPrimary: true },
+      data: { productId: product.id, url: linkUrl, isPrimary: true },
     })
   }
 

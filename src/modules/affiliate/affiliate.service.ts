@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { createHash } from "crypto"
+import { getEffectiveAffiliateUrl } from "@/lib/affiliate-url"
 
 export const affiliateService = {
   async recordClick(input: {
@@ -14,10 +15,11 @@ export const affiliateService = {
   }) {
     const product = await prisma.product.findUnique({
       where: { id: input.productId },
-      select: { id: true, affiliateUrl: true },
+      select: { id: true, affiliateUrl: true, affiliateUrlOverride: true, isVisible: true },
     })
-    if (!product) return null
+    if (!product || !product.isVisible) return null
 
+    const url = getEffectiveAffiliateUrl(product)
     const ipHash = input.ip
       ? createHash("sha256").update(input.ip).digest("hex").slice(0, 16)
       : undefined
@@ -26,7 +28,7 @@ export const affiliateService = {
       prisma.affiliateClick.create({
         data: {
           productId: product.id,
-          affiliateUrl: product.affiliateUrl,
+          affiliateUrl: url,
           referrer: input.referrer,
           utmSource: input.utmSource,
           utmMedium: input.utmMedium,
@@ -42,14 +44,18 @@ export const affiliateService = {
       }),
     ])
 
-    return product.affiliateUrl
+    return url
   },
 
   async getRedirectUrlBySlug(slug: string) {
-    const product = await prisma.product.findUnique({
-      where: { slug },
-      select: { id: true, affiliateUrl: true },
+    const product = await prisma.product.findFirst({
+      where: { slug, isVisible: true },
+      select: { id: true, affiliateUrl: true, affiliateUrlOverride: true },
     })
-    return product
+    if (!product) return null
+    return {
+      id: product.id,
+      affiliateUrl: getEffectiveAffiliateUrl(product),
+    }
   },
 }

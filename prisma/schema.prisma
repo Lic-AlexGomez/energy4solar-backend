@@ -66,7 +66,9 @@ model Product {
   badge            String?
   inStock          Boolean  @default(true)
   stockOnHand      Int?
+  isVisible        Boolean  @default(true)
   affiliateUrl     String
+  affiliateUrlOverride String?
   manufacturerUrl  String?
   brandId          String?
   categoryId       String?
@@ -97,6 +99,7 @@ model Product {
   @@index([price])
   @@index([energyScore])
   @@index([inStock])
+  @@index([isVisible])
   @@schema("energy4solar")
 }
 

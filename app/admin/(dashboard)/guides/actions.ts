@@ -43,3 +43,18 @@ export async function deleteGuideAction(id: string) {
   await prisma.guide.delete({ where: { id } })
   revalidatePath("/admin/guides")
 }
+
+export async function toggleGuidePublishedAction(formData: FormData) {
+  const id = String(formData.get("id") ?? "")
+  const published = formData.get("published") === "true"
+
+  await prisma.guide.update({
+    where: { id },
+    data: {
+      published,
+      publishedAt: published ? new Date() : null,
+    },
+  })
+
+  revalidatePath("/admin/guides")
+}

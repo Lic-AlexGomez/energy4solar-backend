@@ -1,17 +1,10 @@
 import Link from "next/link"
+import { AdminNav } from "../components/admin-nav"
 import { requireAdminPage } from "@/lib/admin-auth"
 import { logoutAction } from "../logout/actions"
 import "../admin.css"
 
 export const dynamic = "force-dynamic"
-
-const nav = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/sync", label: "Sync" },
-  { href: "/admin/analytics", label: "Analytics" },
-  { href: "/admin/guides", label: "Guides" },
-  { href: "/admin/seo", label: "SEO" },
-]
 
 export default async function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   await requireAdminPage()
@@ -20,14 +13,12 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <div className="admin-brand">Energy4Solar</div>
-        <nav className="admin-nav">
-          {nav.map((item) => (
-            <Link key={item.href} href={item.href}>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="admin-brand">
+          <span className="admin-brand-icon">⚡</span>
+          Energy4Solar
+        </div>
+        <p className="admin-brand-sub">Admin console</p>
+        <AdminNav />
         <div className="admin-sidebar-footer">
           <a href={siteUrl} target="_blank" rel="noreferrer">
             View live site ↗
