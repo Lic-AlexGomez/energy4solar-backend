@@ -28,7 +28,7 @@ export default async function AdminCommissionsPage() {
             </button>
           </form>
         ) : null}
-      </div>
+      </header>
 
       <div className="admin-stats">
         <StatCard label="Total earned" value={money(data.totalAmount)} sub={`${data.totalRecords} orders`} accent />
