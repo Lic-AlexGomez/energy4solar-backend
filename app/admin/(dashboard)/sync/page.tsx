@@ -14,7 +14,7 @@ export default async function AdminSyncPage() {
         <SyncTriggerButton />
       </div>
       <p style={{ color: "#94a3b8" }}>
-        Automatic sync runs every 15 minutes via Vercel Cron. Products remain read-only; Zoho Books is the source of truth.
+        Automatic sync runs daily on Vercel Hobby (08:00 UTC). Use &quot;Force sync&quot; or an external cron for more frequent updates.
       </p>
       <table style={{ width: "100%", marginTop: "2rem", borderCollapse: "collapse", fontSize: "0.875rem" }}>
         <thead>

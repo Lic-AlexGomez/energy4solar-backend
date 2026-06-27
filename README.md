@@ -10,7 +10,7 @@ Energy4Solar is an **affiliate platform** — customers never checkout here. Pro
 - TypeScript (strict)
 - Prisma ORM + PostgreSQL (Supabase)
 - Zod validation
-- Vercel Cron (15-minute sync)
+- Vercel Cron (daily sync on Hobby; 15-min on Pro)
 - TanStack Query compatible JSON (`{ data, meta? }`)
 
 ## Quick start
@@ -70,7 +70,9 @@ npm run sync
 4. Set `ADMIN_API_KEY` for admin login and `POST /api/admin/sync`
 5. Set `CORS_ORIGINS=https://www.energy4solar.com`
 
-Cron is configured in `vercel.json` → `GET /api/cron/sync` every 15 minutes.
+Cron is configured in `vercel.json` → `GET /api/cron/sync` **once per day at 08:00 UTC**.
+
+> **Vercel Hobby** only allows cron jobs that run once per day. For sync every 15 minutes you need **Vercel Pro**, or use a free external scheduler (e.g. [cron-job.org](https://cron-job.org)) to `GET` `/api/cron/sync` with header `Authorization: Bearer <CRON_SECRET>`. You can also force sync from `/admin` or `npm run sync`.
 
 ### Recommended architecture
 
