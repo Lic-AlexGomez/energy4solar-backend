@@ -1,10 +1,89 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getEffectiveAffiliateUrl } from "@/lib/affiliate-url"
 import type { AdminProductSort } from "./products-query"
 import { parseAdminProductSort } from "./products-query"
+
+export type PriceVisibilityFilters = {
+  hideZero: boolean
+  hideBelow: number | null
+  hideAbove: number | null
+}
+
+function parsePriceVisibilityFilters(formData: FormData): PriceVisibilityFilters {
+  const hideBelowRaw = String(formData.get("hideBelow") ?? "").trim()
+  const hideAboveRaw = String(formData.get("hideAbove") ?? "").trim()
+
+  return {
+    hideZero: formData.get("hideZero") === "true",
+    hideBelow: hideBelowRaw === "" ? null : Number(hideBelowRaw),
+    hideAbove: hideAboveRaw === "" ? null : Number(hideAboveRaw),
+  }
+}
+
+function buildPriceVisibilityWhere(filters: PriceVisibilityFilters): Prisma.ProductWhereInput | null {
+  const rules: Prisma.ProductWhereInput[] = []
+
+  if (filters.hideZero) {
+    rules.push({ price: { equals: 0 } })
+  }
+  if (filters.hideBelow != null && !Number.isNaN(filters.hideBelow)) {
+    rules.push({ price: { lt: filters.hideBelow } })
+  }
+  if (filters.hideAbove != null && !Number.isNaN(filters.hideAbove)) {
+    rules.push({ price: { gt: filters.hideAbove } })
+  }
+
+  if (!rules.length) return null
+  return rules.length === 1 ? rules[0]! : { OR: rules }
+}
+
+export async function previewPriceVisibilityAction(formData: FormData) {
+  const filters = parsePriceVisibilityFilters(formData)
+  const where = buildPriceVisibilityWhere(filters)
+  if (!where) return { total: 0, visible: 0, hidden: 0 }
+
+  const [total, visible, hidden] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.count({ where: { ...where, isVisible: true } }),
+    prisma.product.count({ where: { ...where, isVisible: false } }),
+  ])
+
+  return { total, visible, hidden }
+}
+
+export async function bulkHideByPriceAction(formData: FormData) {
+  const filters = parsePriceVisibilityFilters(formData)
+  const where = buildPriceVisibilityWhere(filters)
+  if (!where) return { updated: 0 }
+
+  const result = await prisma.product.updateMany({
+    where: { ...where, isVisible: true },
+    data: { isVisible: false },
+  })
+
+  revalidatePath("/admin/products")
+  revalidatePath("/admin")
+  return { updated: result.count }
+}
+
+export async function bulkShowByPriceAction(formData: FormData) {
+  const filters = parsePriceVisibilityFilters(formData)
+  const where = buildPriceVisibilityWhere(filters)
+  if (!where) return { updated: 0 }
+
+  const result = await prisma.product.updateMany({
+    where: { ...where, isVisible: false },
+    data: { isVisible: true },
+  })
+
+  revalidatePath("/admin/products")
+  revalidatePath("/admin")
+  return { updated: result.count }
+}
 
 export async function updateAffiliateUrlAction(formData: FormData) {
   const productId = String(formData.get("productId") ?? "")

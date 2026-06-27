@@ -2,6 +2,7 @@ import Link from "next/link"
 import { getAdminProducts } from "./actions"
 import { ProductSortSelect } from "./product-sort-select"
 import { productsAdminHref } from "./products-query"
+import { PriceVisibilityBulk } from "./price-visibility-bulk"
 import { ProductsTable } from "./products-table"
 
 export default async function AdminProductsPage({
@@ -61,6 +62,8 @@ export default async function AdminProductsPage({
         </form>
         <ProductSortSelect sort={data.sort} q={q} />
       </div>
+
+      <PriceVisibilityBulk />
 
       <ProductsTable rows={data.rows} siteUrl={siteUrl} />
 

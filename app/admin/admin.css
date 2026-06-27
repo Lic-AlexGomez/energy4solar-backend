@@ -772,6 +772,152 @@
   filter: none;
 }
 
+.admin-btn-warn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.admin-btn-warn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  filter: none;
+}
+
+/* ─── Price bulk visibility ─────────────────────────────────────────────── */
+.admin-price-bulk {
+  margin-bottom: 1rem;
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-price-bulk-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--admin-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.admin-price-bulk-toggle:hover {
+  background: var(--admin-surface-2);
+}
+
+.admin-price-bulk-chevron {
+  color: var(--admin-muted-2);
+  font-size: 0.75rem;
+}
+
+.admin-price-bulk-body {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--admin-border-subtle);
+}
+
+.admin-price-bulk-hint {
+  margin: 0.75rem 0 0.65rem;
+  font-size: 0.8125rem;
+  color: var(--admin-muted);
+  max-width: 62ch;
+}
+
+.admin-price-bulk-hint em {
+  font-style: normal;
+  color: var(--admin-muted-2);
+}
+
+.admin-price-bulk-presets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-price-bulk-fields {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-price-bulk-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--admin-text);
+  cursor: pointer;
+}
+
+.admin-price-bulk-check input {
+  accent-color: var(--admin-accent);
+}
+
+.admin-price-bulk-field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--admin-muted);
+}
+
+.admin-price-input-wrap {
+  display: flex;
+  align-items: center;
+  max-width: 220px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-surface-2);
+  overflow: hidden;
+}
+
+.admin-price-prefix {
+  padding: 0.45rem 0.55rem;
+  color: var(--admin-muted-2);
+  font-size: 0.8125rem;
+  border-right: 1px solid var(--admin-border);
+}
+
+.admin-price-input-wrap input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+  border: none;
+  background: transparent;
+  color: var(--admin-text);
+  font-size: 0.8125rem;
+}
+
+.admin-price-input-wrap input:focus {
+  outline: none;
+}
+
+.admin-price-input-wrap:focus-within {
+  border-color: var(--admin-accent);
+}
+
+.admin-price-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.admin-price-bulk-preview,
+.admin-price-bulk-message {
+  margin: 0.65rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--admin-muted);
+}
+
+.admin-price-bulk-message {
+  color: var(--admin-accent-text);
+}
+
 /* ─── Toggle ────────────────────────────────────────────────────────────── */
 .admin-toggle {
   position: relative;
