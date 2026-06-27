@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "sync": "tsx scripts/run-sync.ts",
+    "enrich-images": "tsx scripts/enrich-images.ts",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

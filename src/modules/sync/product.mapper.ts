@@ -32,7 +32,7 @@ export function inferBrandName(item: ZohoItem): string {
 export function buildAffiliateUrl(sku: string | undefined, itemId: string): string {
   const env = getEnv()
   const base = env.AFFILIATE_BASE_URL.replace(/\/$/, "")
-  const path = sku ? `/product/${encodeURIComponent(sku)}` : `/shop`
+  const path = sku ? `/products/${encodeURIComponent(sku.toLowerCase())}` : `/shop`
   const url = new URL(path, base)
   url.searchParams.set("utm_source", env.AFFILIATE_UTM_SOURCE)
   url.searchParams.set("utm_medium", env.AFFILIATE_UTM_MEDIUM)
@@ -58,7 +58,7 @@ export function mapZohoItemToProductData(item: ZohoItem, categoryId: string, bra
     inStock: stock > 0 || item.status !== "inactive",
     stockOnHand: stock,
     affiliateUrl: buildAffiliateUrl(sku, String(item.item_id)),
-    manufacturerUrl: sku ? `https://bigbattery.com/product/${sku}` : "https://bigbattery.com/shop",
+    manufacturerUrl: sku ? `https://bigbattery.com/products/${sku.toLowerCase()}` : "https://bigbattery.com/shop",
     categoryId,
     brandId,
     zohoRaw: item as object,

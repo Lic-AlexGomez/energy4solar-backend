@@ -3,6 +3,8 @@ import { uniqueProductSlug } from "@/lib/slug"
 import { getZohoClient } from "@/modules/zoho/client"
 import type { ZohoItem } from "@/modules/zoho/types"
 import { SyncStatus } from "@prisma/client"
+import { loadWooCommerceImageCatalog, resolveWooProductMedia } from "../woocommerce/images"
+import type { WooImageCatalog } from "../woocommerce/types"
 import {
   buildSearchDocument,
   inferBrandName,
@@ -31,11 +33,12 @@ export const zohoSyncService = {
 
     try {
       const zoho = getZohoClient()
+      const wooCatalog = await loadWooCommerceImageCatalog()
       for await (const batch of zoho.listItems()) {
         for (const item of batch) {
           itemsFetched += 1
           try {
-            const changed = await upsertZohoItem(item)
+            const changed = await upsertZohoItem(item, wooCatalog)
             itemsUpserted += 1
             if (changed) priceChanges += 1
           } catch (err) {
@@ -76,7 +79,7 @@ export const zohoSyncService = {
   },
 }
 
-async function upsertZohoItem(item: ZohoItem): Promise<boolean> {
+async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Promise<boolean> {
   const categorySlug = inferCategorySlug(item)
   const brandName = inferBrandName(item)
 
@@ -94,6 +97,14 @@ async function upsertZohoItem(item: ZohoItem): Promise<boolean> {
   })
 
   const mapped = mapZohoItemToProductData(item, category.id, brand.id)
+
+  const wooMedia = await resolveWooProductMedia(mapped.sku, wooCatalog)
+  if (wooMedia.images.length) {
+    mapped.images = wooMedia.images
+  }
+  if (wooMedia.permalink) {
+    mapped.manufacturerUrl = wooMedia.permalink
+  }
 
   const existing = await prisma.product.findUnique({
     where: { zohoItemId: mapped.zohoItemId },

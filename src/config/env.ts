@@ -14,6 +14,13 @@ const envSchema = z.object({
   AFFILIATE_BASE_URL: z.string().default("https://bigbattery.com"),
   AFFILIATE_UTM_SOURCE: z.string().default("energy4solar"),
   AFFILIATE_UTM_MEDIUM: z.string().default("affiliate"),
+  WOO_STORE_URL: z.string().default("https://bigbattery.com"),
+  WOO_CONSUMER_KEY: z.string().optional(),
+  WOO_CONSUMER_SECRET: z.string().optional(),
+  WOO_IMAGE_OG_FALLBACK: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
   CRON_SECRET: z.string().optional(),
   ADMIN_API_KEY: z.string().optional(),
   SITE_URL: z.string().default("https://www.energy4solar.com"),
