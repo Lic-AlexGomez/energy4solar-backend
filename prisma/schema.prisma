@@ -1,0 +1,297 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Catalog (synced from Zoho Books) ───────────────────────────────────────
+
+model Brand {
+  id          String    @id @default(cuid())
+  zohoId      String?   @unique
+  slug        String    @unique
+  name        String
+  description String    @default("")
+  tagline     String    @default("")
+  founded     String?
+  headquarters String?
+  productCount Int      @default(0)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  zohoId      String?   @unique
+  slug        String    @unique
+  name        String
+  tagline     String    @default("")
+  description String    @default("")
+  imageUrl    String?
+  sortOrder   Int       @default(0)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id               String   @id @default(cuid())
+  zohoItemId       String   @unique
+  slug             String   @unique
+  sku              String?
+  name             String
+  shortDescription String   @default("")
+  description      String   @default("")
+  capacity         String?
+  voltage          String?
+  chemistry        String?
+  warranty         String?
+  cycleLife        Int?
+  weightLbs        Float?
+  price            Decimal  @db.Decimal(12, 2)
+  oldPrice         Decimal? @db.Decimal(12, 2)
+  rating           Float    @default(0)
+  reviewCount      Int      @default(0)
+  energyScore      Int      @default(0)
+  badge            String?
+  inStock          Boolean  @default(true)
+  stockOnHand      Int?
+  affiliateUrl     String
+  manufacturerUrl  String?
+  brandId          String?
+  categoryId       String?
+  brand            Brand?    @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  category         Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  images           ProductImage[]
+  specifications   ProductSpecification[]
+  features         ProductFeature[]
+  faqs             ProductFAQ[]
+  reviews          ProductReview[]
+  affiliateLinks   AffiliateLink[]
+  affiliateClicks  AffiliateClick[]
+  priceHistory     PriceHistory[]
+  seo              ProductSEO?
+  searchIndex      SearchIndex?
+  pros             String[] @default([])
+  cons             String[] @default([])
+  compatibility    String[] @default([])
+  idealUseCases    String[] @default([])
+  zohoRaw          Json?
+  lastSyncedAt     DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([slug])
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([price])
+  @@index([energyScore])
+  @@index([inStock])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+
+  @@index([productId])
+}
+
+model ProductSpecification {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+  sortOrder Int     @default(0)
+
+  @@index([productId])
+}
+
+model ProductFeature {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  text      String
+  sortOrder Int     @default(0)
+
+  @@index([productId])
+}
+
+model ProductFAQ {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  question  String
+  answer    String
+  sortOrder Int     @default(0)
+
+  @@index([productId])
+}
+
+model ProductReview {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  author    String
+  rating    Int
+  title     String?
+  body      String
+  verified  Boolean  @default(false)
+  reviewDate DateTime @default(now())
+  source    String   @default("editorial")
+
+  @@index([productId])
+}
+
+model ProductSEO {
+  id              String  @id @default(cuid())
+  productId       String  @unique
+  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  metaTitle       String?
+  metaDescription String?
+  keywords        String[] @default([])
+  canonicalUrl    String?
+  ogImage         String?
+  noIndex         Boolean @default(false)
+  updatedAt       DateTime @updatedAt
+}
+
+// ─── Guides (editorial, managed in admin) ───────────────────────────────────
+
+model GuideCategory {
+  id      String  @id @default(cuid())
+  slug    String  @unique
+  name    String
+  guides  Guide[]
+}
+
+model Guide {
+  id          String         @id @default(cuid())
+  slug        String         @unique
+  title       String
+  excerpt     String
+  content     String         @db.Text
+  imageUrl    String?
+  readTime    String         @default("5 min read")
+  difficulty  String         @default("Beginner")
+  published   Boolean        @default(false)
+  publishedAt DateTime?
+  categoryId  String?
+  category    GuideCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  seo         GuideSEO?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([published])
+}
+
+model GuideSEO {
+  id              String @id @default(cuid())
+  guideId         String @unique
+  guide           Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  metaTitle       String?
+  metaDescription String?
+  keywords        String[] @default([])
+}
+
+// ─── Affiliate ──────────────────────────────────────────────────────────────
+
+model AffiliateLink {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  network   String   @default("bigbattery")
+  isPrimary Boolean  @default(true)
+  clickCount Int     @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+}
+
+model AffiliateClick {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  affiliateUrl String
+  referrer    String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  userAgent   String?
+  ipHash      String?
+  locale      String?
+  createdAt   DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+// ─── Price history & search ─────────────────────────────────────────────────
+
+model PriceHistory {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  price     Decimal  @db.Decimal(12, 2)
+  source    String   @default("zoho_sync")
+  recordedAt DateTime @default(now())
+
+  @@index([productId, recordedAt])
+}
+
+model SearchIndex {
+  id        String  @id @default(cuid())
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  document  String  @db.Text
+  tokens    String[] @default([])
+
+  @@index([productId])
+}
+
+// ─── Admin & sync ───────────────────────────────────────────────────────────
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         String   @default("admin")
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model SyncLog {
+  id            String   @id @default(cuid())
+  status        SyncStatus
+  startedAt     DateTime @default(now())
+  finishedAt    DateTime?
+  itemsFetched  Int      @default(0)
+  itemsUpserted Int      @default(0)
+  itemsFailed   Int      @default(0)
+  priceChanges  Int      @default(0)
+  errorMessage  String?  @db.Text
+  metadata      Json?
+
+  @@index([startedAt])
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
