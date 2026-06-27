@@ -6,6 +6,7 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  schemas   = ["energy4solar"]
 }
 
 // ─── Catalog (synced from Zoho Books) ───────────────────────────────────────
@@ -23,6 +24,8 @@ model Brand {
   products    Product[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@schema("energy4solar")
 }
 
 model Category {
@@ -37,6 +40,8 @@ model Category {
   products    Product[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@schema("energy4solar")
 }
 
 model Product {
@@ -92,6 +97,7 @@ model Product {
   @@index([price])
   @@index([energyScore])
   @@index([inStock])
+  @@schema("energy4solar")
 }
 
 model ProductImage {
@@ -104,6 +110,7 @@ model ProductImage {
   isPrimary Boolean @default(false)
 
   @@index([productId])
+  @@schema("energy4solar")
 }
 
 model ProductSpecification {
@@ -115,6 +122,7 @@ model ProductSpecification {
   sortOrder Int     @default(0)
 
   @@index([productId])
+  @@schema("energy4solar")
 }
 
 model ProductFeature {
@@ -125,6 +133,7 @@ model ProductFeature {
   sortOrder Int     @default(0)
 
   @@index([productId])
+  @@schema("energy4solar")
 }
 
 model ProductFAQ {
@@ -136,6 +145,7 @@ model ProductFAQ {
   sortOrder Int     @default(0)
 
   @@index([productId])
+  @@schema("energy4solar")
 }
 
 model ProductReview {
@@ -151,6 +161,7 @@ model ProductReview {
   source    String   @default("editorial")
 
   @@index([productId])
+  @@schema("energy4solar")
 }
 
 model ProductSEO {
@@ -164,6 +175,8 @@ model ProductSEO {
   ogImage         String?
   noIndex         Boolean @default(false)
   updatedAt       DateTime @updatedAt
+
+  @@schema("energy4solar")
 }
 
 // ─── Guides (editorial, managed in admin) ───────────────────────────────────
@@ -173,6 +186,8 @@ model GuideCategory {
   slug    String  @unique
   name    String
   guides  Guide[]
+
+  @@schema("energy4solar")
 }
 
 model Guide {
@@ -193,6 +208,7 @@ model Guide {
   updatedAt   DateTime       @updatedAt
 
   @@index([published])
+  @@schema("energy4solar")
 }
 
 model GuideSEO {
@@ -202,6 +218,8 @@ model GuideSEO {
   metaTitle       String?
   metaDescription String?
   keywords        String[] @default([])
+
+  @@schema("energy4solar")
 }
 
 // ─── Affiliate ──────────────────────────────────────────────────────────────
@@ -218,6 +236,7 @@ model AffiliateLink {
   updatedAt DateTime @updatedAt
 
   @@index([productId])
+  @@schema("energy4solar")
 }
 
 model AffiliateClick {
@@ -236,6 +255,7 @@ model AffiliateClick {
 
   @@index([productId])
   @@index([createdAt])
+  @@schema("energy4solar")
 }
 
 // ─── Price history & search ─────────────────────────────────────────────────
@@ -249,6 +269,7 @@ model PriceHistory {
   recordedAt DateTime @default(now())
 
   @@index([productId, recordedAt])
+  @@schema("energy4solar")
 }
 
 model SearchIndex {
@@ -259,6 +280,7 @@ model SearchIndex {
   tokens    String[] @default([])
 
   @@index([productId])
+  @@schema("energy4solar")
 }
 
 // ─── Admin & sync ───────────────────────────────────────────────────────────
@@ -272,6 +294,8 @@ model AdminUser {
   lastLoginAt  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@schema("energy4solar")
 }
 
 model SyncLog {
@@ -287,6 +311,7 @@ model SyncLog {
   metadata      Json?
 
   @@index([startedAt])
+  @@schema("energy4solar")
 }
 
 enum SyncStatus {
@@ -294,4 +319,6 @@ enum SyncStatus {
   SUCCESS
   PARTIAL
   FAILED
+
+  @@schema("energy4solar")
 }

@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       }),
       prisma.$queryRaw<{ day: Date; clicks: bigint }[]>`
         SELECT date_trunc('day', "createdAt") AS day, COUNT(*)::bigint AS clicks
-        FROM "AffiliateClick"
+        FROM energy4solar."AffiliateClick"
         WHERE "createdAt" > NOW() - INTERVAL '30 days'
         GROUP BY 1 ORDER BY 1 DESC
       `,
