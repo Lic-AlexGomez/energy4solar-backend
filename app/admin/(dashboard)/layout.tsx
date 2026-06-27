@@ -13,15 +13,19 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <div className="admin-brand">
-          <span className="admin-brand-icon">⚡</span>
-          Energy4Solar
+        <div className="admin-sidebar-top">
+          <div className="admin-brand">
+            <span className="admin-brand-mark">E4S</span>
+            <div>
+              <div className="admin-brand-name">Energy4Solar</div>
+              <div className="admin-brand-sub">Admin</div>
+            </div>
+          </div>
+          <AdminNav />
         </div>
-        <p className="admin-brand-sub">Admin console</p>
-        <AdminNav />
         <div className="admin-sidebar-footer">
-          <a href={siteUrl} target="_blank" rel="noreferrer">
-            View live site ↗
+          <a href={siteUrl} target="_blank" rel="noreferrer" className="admin-footer-link">
+            Live site ↗
           </a>
           <form action={logoutAction}>
             <button type="submit" className="admin-logout">
@@ -30,7 +34,9 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
           </form>
         </div>
       </aside>
-      <main className="admin-main">{children}</main>
+      <div className="admin-main-wrap">
+        <main className="admin-main">{children}</main>
+      </div>
     </div>
   )
 }

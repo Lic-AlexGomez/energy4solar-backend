@@ -12,8 +12,8 @@ export default async function AdminCommissionsPage() {
   const maxMonth = Math.max(...data.byMonth.map((m) => m.total), 1)
 
   return (
-    <div>
-      <div className="admin-page-header">
+    <div className="admin-page">
+      <header className="admin-page-header">
         <div>
           <h1 className="admin-page-title">My commissions</h1>
           <p className="admin-subtitle">

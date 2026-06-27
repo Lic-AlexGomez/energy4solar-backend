@@ -24,8 +24,8 @@ export default async function AdminOverviewPage() {
   const imagePct = productCount ? Math.round((withImages / productCount) * 100) : 0
 
   return (
-    <div>
-      <div className="admin-page-header">
+    <div className="admin-page">
+      <header className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Dashboard</h1>
           <p className="admin-subtitle">Catalog, content, and your affiliate commissions.</p>
@@ -33,7 +33,7 @@ export default async function AdminOverviewPage() {
         <Link href="/admin/sync" className="admin-btn">
           Force sync
         </Link>
-      </div>
+      </header>
 
       <div className="admin-stats">
         <StatCard

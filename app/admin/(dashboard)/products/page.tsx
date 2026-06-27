@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { StatCard } from "../../components/stat-card"
 import { getAdminProducts } from "./actions"
 import { ProductsTable } from "./products-table"
 
@@ -14,61 +13,76 @@ export default async function AdminProductsPage({
   const data = await getAdminProducts(q, page)
 
   return (
-    <div>
-      <div className="admin-page-header">
+    <div className="admin-page">
+      <header className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Products</h1>
-          <p className="admin-subtitle">
-            Manage affiliate referrer links and visibility. Hidden products are removed from the public shop.
-          </p>
+          <p className="admin-subtitle">Affiliate links and shop visibility</p>
         </div>
-        <div className="admin-header-stat">
-          <span className="admin-badge admin-badge-muted">{data.hidden} hidden</span>
+        <div className="admin-toolbar-metrics">
+          <span>
+            <strong>{data.total}</strong> total
+          </span>
+          <span className="admin-metric-dot">·</span>
+          <span>
+            Page <strong>{data.page}</strong>/{data.pages}
+          </span>
+          {data.hidden > 0 ? (
+            <>
+              <span className="admin-metric-dot">·</span>
+              <span className="admin-metric-warn">
+                <strong>{data.hidden}</strong> hidden
+              </span>
+            </>
+          ) : null}
         </div>
-      </div>
+      </header>
 
-      <form className="admin-search-bar" method="get">
-        <input type="search" name="q" defaultValue={q} placeholder="Search by name, SKU or slug…" />
-        <button type="submit" className="admin-btn">
-          Search
-        </button>
-        {q ? (
-          <Link href="/admin/products" className="admin-btn admin-btn-secondary">
-            Clear
-          </Link>
-        ) : null}
-      </form>
-
-      <div className="admin-stats admin-stats-compact">
-        <StatCard label="Total products" value={data.total} />
-        <StatCard label="This page" value={data.rows.length} sub={`Page ${data.page} of ${data.pages}`} />
-        <StatCard label="Hidden" value={data.hidden} accent={data.hidden > 0} />
+      <div className="admin-toolbar">
+        <form className="admin-search-inline" method="get">
+          <span className="admin-search-icon" aria-hidden>
+            ⌕
+          </span>
+          <input type="search" name="q" defaultValue={q} placeholder="Search name, SKU or slug…" />
+          <button type="submit" className="admin-btn admin-btn-sm">
+            Search
+          </button>
+          {q ? (
+            <Link href="/admin/products" className="admin-btn admin-btn-sm admin-btn-ghost">
+              Clear
+            </Link>
+          ) : null}
+        </form>
       </div>
 
       <ProductsTable rows={data.rows} siteUrl={siteUrl} />
 
       {data.pages > 1 ? (
-        <div className="admin-pagination">
+        <nav className="admin-pagination" aria-label="Product pages">
           {page > 1 ? (
             <Link
               href={`/admin/products?q=${encodeURIComponent(q)}&page=${page - 1}`}
-              className="admin-btn admin-btn-secondary"
+              className="admin-btn admin-btn-sm admin-btn-ghost"
             >
-              ← Previous
+              ← Prev
             </Link>
-          ) : null}
+          ) : (
+            <span />
+          )}
           <span className="admin-pagination-info">
-            Page {data.page} / {data.pages}
+            {data.page} / {data.pages}
           </span>
           {page < data.pages ? (
             <Link
               href={`/admin/products?q=${encodeURIComponent(q)}&page=${page + 1}`}
-              className="admin-btn admin-btn-secondary"
+              className="admin-btn admin-btn-sm admin-btn-ghost"
             >
               Next →
             </Link>
-          ) : null}
-        </div>
+          ) : (
+            <span />
+          )}
+        </nav>
       ) : null}
     </div>
   )
