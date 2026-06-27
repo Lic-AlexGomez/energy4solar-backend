@@ -3,17 +3,16 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 const COOKIE = "e4s_admin"
+const SESSION_SCOPE = "e4s-admin-session"
 
-function getAdminCredentials() {
-  const username = process.env.ADMIN_USERNAME ?? "admin"
-  const password = process.env.ADMIN_PASSWORD ?? process.env.ADMIN_API_KEY
-  return { username, password }
+function getAdminPassword(): string | undefined {
+  return process.env.ADMIN_PASSWORD ?? process.env.ADMIN_API_KEY
 }
 
 function sessionToken(): string | null {
-  const { username, password } = getAdminCredentials()
+  const password = getAdminPassword()
   if (!password) return null
-  return createHmac("sha256", password).update(`e4s-admin:${username}`).digest("hex")
+  return createHmac("sha256", password).update(SESSION_SCOPE).digest("hex")
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -31,12 +30,11 @@ export async function isAdminAuthenticated(): Promise<boolean> {
   return Boolean(value && safeEqual(value, token))
 }
 
-export async function setAdminSession(username: string, password: string): Promise<boolean> {
-  const expected = getAdminCredentials()
+export async function setAdminSession(password: string): Promise<boolean> {
+  const expected = getAdminPassword()
   const token = sessionToken()
-  if (!token) return false
-  if (!safeEqual(username.trim(), expected.username)) return false
-  if (!safeEqual(password, expected.password ?? "")) return false
+  if (!expected || !token) return false
+  if (!safeEqual(password, expected)) return false
 
   const jar = await cookies()
   jar.set(COOKIE, token, {

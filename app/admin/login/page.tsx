@@ -13,19 +13,15 @@ export default async function AdminLoginPage({
     <main className="admin-login">
       <div className="admin-login-card">
         <h1>Energy4Solar Admin</h1>
-        <p>Sign in to manage sync, analytics, and content.</p>
+        <p>Enter your admin key to continue.</p>
         {error === "invalid" ? (
           <p className="admin-error" role="alert">
-            Invalid username or password.
+            Invalid admin key.
           </p>
         ) : null}
         <form action={loginAction} className="admin-form">
           <label>
-            Username
-            <input type="text" name="username" defaultValue="admin" autoComplete="username" required />
-          </label>
-          <label>
-            Password
+            Admin key
             <input type="password" name="password" autoComplete="current-password" required />
           </label>
           <button type="submit">Sign in</button>
