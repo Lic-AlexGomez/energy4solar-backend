@@ -16,18 +16,27 @@ export default async function AdminEarningsPage() {
         <div>
           <h1 className="admin-page-title">Earnings</h1>
           <p className="admin-subtitle">
-            Estimated affiliate commission based on clicks × product price × {data.commissionPct}% rate.
-            Configure via <code>AFFILIATE_COMMISSION_PCT</code> env var.
+            Click-based estimates plus real commissions imported from CSV. Rate: {data.commissionPct}% via{" "}
+            <code>AFFILIATE_COMMISSION_PCT</code>.
           </p>
         </div>
+        <Link href="/admin/commissions" className="admin-btn">
+          Import CSV
+        </Link>
       </div>
 
       <div className="admin-stats">
-        <StatCard label="Est. commission (7d)" value={money(data.estCommission7d)} accent />
-        <StatCard label="Est. commission (30d)" value={money(data.estCommission30d)} accent />
-        <StatCard label="Clicks (7d)" value={data.clicks7d} />
+        <StatCard
+          label="Actual commissions"
+          value={money(data.actual.total)}
+          sub={`${data.actual.records} imported rows`}
+          accent
+        />
+        <StatCard label="Paid / approved" value={money(data.actual.paid)} />
+        <StatCard label="Pending" value={money(data.actual.pending)} />
+        <StatCard label="Actual (30d)" value={money(data.actual.last30)} />
+        <StatCard label="Est. (30d)" value={money(data.estCommission30d)} sub="From clicks" />
         <StatCard label="Clicks (30d)" value={data.clicks30d} />
-        <StatCard label="Clicks (all time)" value={data.clicksAll} />
       </div>
 
       <div className="admin-grid-2">

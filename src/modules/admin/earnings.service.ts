@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { getEnv } from "@/config/env"
+import { commissionService } from "./commission.service"
 
 function commissionRate(): number {
   const pct = Number(process.env.AFFILIATE_COMMISSION_PCT ?? "5")
@@ -78,6 +79,8 @@ export const earningsService = {
       estCommission: row.clickCount * Number(row.product.price) * rate,
     }))
 
+    const commissions = await commissionService.getDashboard()
+
     return {
       commissionPct: rate * 100,
       siteUrl: getEnv().SITE_URL,
@@ -92,6 +95,13 @@ export const earningsService = {
         day: new Date(d.day).toISOString().slice(0, 10),
         clicks: Number(d.clicks),
       })),
+      actual: {
+        total: commissions.totalAmount,
+        paid: commissions.paidAmount,
+        pending: commissions.pendingAmount,
+        last30: commissions.last30Amount,
+        records: commissions.totalRecords,
+      },
     }
   },
 }
