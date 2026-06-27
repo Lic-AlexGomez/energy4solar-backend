@@ -1,16 +1,18 @@
 import Link from "next/link"
 import { getAdminProducts } from "./actions"
+import { ProductSortSelect } from "./product-sort-select"
+import { productsAdminHref } from "./products-query"
 import { ProductsTable } from "./products-table"
 
 export default async function AdminProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>
+  searchParams: Promise<{ q?: string; page?: string; sort?: string }>
 }) {
-  const { q = "", page: pageStr = "1" } = await searchParams
+  const { q = "", page: pageStr = "1", sort } = await searchParams
   const page = Math.max(1, Number(pageStr) || 1)
   const siteUrl = process.env.SITE_URL ?? "https://www.energy4solar.com"
-  const data = await getAdminProducts(q, page)
+  const data = await getAdminProducts(q, page, sort)
 
   return (
     <div className="admin-page">
@@ -44,15 +46,20 @@ export default async function AdminProductsPage({
             ⌕
           </span>
           <input type="search" name="q" defaultValue={q} placeholder="Search name, SKU or slug…" />
+          <input type="hidden" name="sort" value={data.sort} />
           <button type="submit" className="admin-btn admin-btn-sm">
             Search
           </button>
           {q ? (
-            <Link href="/admin/products" className="admin-btn admin-btn-sm admin-btn-ghost">
+            <Link
+              href={productsAdminHref({ sort: data.sort })}
+              className="admin-btn admin-btn-sm admin-btn-ghost"
+            >
               Clear
             </Link>
           ) : null}
         </form>
+        <ProductSortSelect sort={data.sort} q={q} />
       </div>
 
       <ProductsTable rows={data.rows} siteUrl={siteUrl} />
@@ -61,7 +68,7 @@ export default async function AdminProductsPage({
         <nav className="admin-pagination" aria-label="Product pages">
           {page > 1 ? (
             <Link
-              href={`/admin/products?q=${encodeURIComponent(q)}&page=${page - 1}`}
+              href={productsAdminHref({ q, sort: data.sort, page: page - 1 })}
               className="admin-btn admin-btn-sm admin-btn-ghost"
             >
               ← Prev
@@ -74,7 +81,7 @@ export default async function AdminProductsPage({
           </span>
           {page < data.pages ? (
             <Link
-              href={`/admin/products?q=${encodeURIComponent(q)}&page=${page + 1}`}
+              href={productsAdminHref({ q, sort: data.sort, page: page + 1 })}
               className="admin-btn admin-btn-sm admin-btn-ghost"
             >
               Next →
