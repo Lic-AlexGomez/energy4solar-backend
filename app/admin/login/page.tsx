@@ -1,29 +1,39 @@
 import Link from "next/link"
 import { loginAction } from "./actions"
+import "../admin.css"
 
-export default function AdminLoginPage() {
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error } = await searchParams
+
   return (
-    <main style={{ maxWidth: 400, margin: "6rem auto", padding: "0 1.5rem" }}>
-      <h1>Admin login</h1>
-      <p style={{ color: "#94a3b8" }}>Enter your admin API key to continue.</p>
-      <form action={loginAction} style={{ marginTop: "1.5rem", display: "grid", gap: "1rem" }}>
-        <input
-          type="password"
-          name="passkey"
-          placeholder="Admin API key"
-          required
-          style={{ padding: "0.75rem", borderRadius: 8, border: "1px solid #334155", background: "#1e293b", color: "#fff" }}
-        />
-        <button
-          type="submit"
-          style={{ padding: "0.75rem", borderRadius: 8, border: "none", background: "#22c55e", color: "#052e16", fontWeight: 600, cursor: "pointer" }}
-        >
-          Sign in
-        </button>
-      </form>
-      <p style={{ marginTop: "1.5rem" }}>
-        <Link href="/">← Back to API home</Link>
-      </p>
+    <main className="admin-login">
+      <div className="admin-login-card">
+        <h1>Energy4Solar Admin</h1>
+        <p>Sign in to manage sync, analytics, and content.</p>
+        {error === "invalid" ? (
+          <p className="admin-error" role="alert">
+            Invalid username or password.
+          </p>
+        ) : null}
+        <form action={loginAction} className="admin-form">
+          <label>
+            Username
+            <input type="text" name="username" defaultValue="admin" autoComplete="username" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" autoComplete="current-password" required />
+          </label>
+          <button type="submit">Sign in</button>
+        </form>
+        <p className="admin-login-footer">
+          <Link href="/">← Back to API home</Link>
+        </p>
+      </div>
     </main>
   )
 }

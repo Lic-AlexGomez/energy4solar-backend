@@ -22,6 +22,8 @@ const envSchema = z.object({
     .optional()
     .transform((v) => v === "true"),
   CRON_SECRET: z.string().optional(),
+  ADMIN_USERNAME: z.string().default("admin"),
+  ADMIN_PASSWORD: z.string().optional(),
   ADMIN_API_KEY: z.string().optional(),
   SITE_URL: z.string().default("https://www.energy4solar.com"),
 })

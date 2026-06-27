@@ -1,34 +1,68 @@
+import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 
 export default async function AdminOverviewPage() {
-  const [productCount, clickCount, lastSync] = await Promise.all([
+  const [productCount, withImages, clickCount, categoryCount, lastSync] = await Promise.all([
     prisma.product.count(),
+    prisma.product.count({ where: { images: { some: {} } } }),
     prisma.affiliateClick.count(),
+    prisma.category.count(),
     prisma.syncLog.findFirst({ orderBy: { startedAt: "desc" } }),
   ])
 
+  const withoutImages = productCount - withImages
+  const imagePct = productCount ? Math.round((withImages / productCount) * 100) : 0
+
   return (
     <div>
-      <h1>Dashboard</h1>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginTop: "1.5rem" }}>
-        <StatCard label="Products synced" value={productCount} />
-        <StatCard label="Affiliate clicks" value={clickCount} />
+      <h1 className="admin-page-title">Dashboard</h1>
+      <p className="admin-subtitle">Energy4Solar affiliate platform — catalog, sync, and analytics.</p>
+
+      <div className="admin-stats">
+        <StatCard label="Products" value={productCount} sub={`${categoryCount} categories`} />
+        <StatCard label="With images" value={withImages} sub={`${imagePct}% coverage`} />
+        <StatCard label="Missing images" value={withoutImages} sub="Woo / OG enrichment" />
+        <StatCard label="Affiliate clicks" value={clickCount} sub="All time" />
         <StatCard
           label="Last sync"
-          value={lastSync ? lastSync.status : "—"}
-          sub={lastSync?.finishedAt?.toISOString() ?? "Never"}
+          value={lastSync?.status ?? "—"}
+          sub={lastSync?.finishedAt?.toLocaleString() ?? "Never"}
         />
       </div>
+
+      <section className="admin-section">
+        <h2>Quick actions</h2>
+        <div className="admin-actions">
+          <Link href="/admin/sync" className="admin-btn">
+            Zoho sync
+          </Link>
+          <Link href="/admin/analytics" className="admin-btn admin-btn-secondary">
+            Analytics
+          </Link>
+          <a href="/api/health" className="admin-btn admin-btn-secondary" target="_blank" rel="noreferrer">
+            API health
+          </a>
+        </div>
+      </section>
+
+      {lastSync?.errorMessage ? (
+        <section className="admin-section">
+          <h2>Last sync error</h2>
+          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", color: "#fca5a5" }}>
+            {lastSync.errorMessage}
+          </pre>
+        </section>
+      ) : null}
     </div>
   )
 }
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div style={{ padding: "1.25rem", borderRadius: 12, background: "#1e293b", border: "1px solid #334155" }}>
-      <div style={{ color: "#94a3b8", fontSize: "0.875rem" }}>{label}</div>
-      <div style={{ fontSize: "1.75rem", fontWeight: 700, marginTop: "0.25rem" }}>{value}</div>
-      {sub ? <div style={{ color: "#64748b", fontSize: "0.75rem", marginTop: "0.25rem" }}>{sub}</div> : null}
+    <div className="admin-stat-card">
+      <div className="admin-stat-label">{label}</div>
+      <div className="admin-stat-value">{value}</div>
+      {sub ? <div className="admin-stat-sub">{sub}</div> : null}
     </div>
   )
 }

@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { requireAdminPage } from "@/lib/admin-auth"
+import { logoutAction } from "../logout/actions"
+import "../admin.css"
 
 export const dynamic = "force-dynamic"
 
@@ -13,19 +15,31 @@ const nav = [
 
 export default async function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   await requireAdminPage()
+  const siteUrl = process.env.SITE_URL ?? "https://www.energy4solar.com"
+
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <aside style={{ width: 220, padding: "1.5rem", borderRight: "1px solid #334155", background: "#1e293b" }}>
-        <strong>Energy4Solar</strong>
-        <nav style={{ marginTop: "1.5rem", display: "grid", gap: "0.5rem" }}>
+    <div className="admin-shell">
+      <aside className="admin-sidebar">
+        <div className="admin-brand">Energy4Solar</div>
+        <nav className="admin-nav">
           {nav.map((item) => (
-            <Link key={item.href} href={item.href} style={{ color: "#94a3b8" }}>
+            <Link key={item.href} href={item.href}>
               {item.label}
             </Link>
           ))}
         </nav>
+        <div className="admin-sidebar-footer">
+          <a href={siteUrl} target="_blank" rel="noreferrer">
+            View live site ↗
+          </a>
+          <form action={logoutAction}>
+            <button type="submit" className="admin-logout">
+              Sign out
+            </button>
+          </form>
+        </div>
       </aside>
-      <main style={{ flex: 1, padding: "2rem" }}>{children}</main>
+      <main className="admin-main">{children}</main>
     </div>
   )
 }

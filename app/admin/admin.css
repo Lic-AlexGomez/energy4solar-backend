@@ -1,0 +1,255 @@
+.admin-login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.admin-login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  border-radius: 16px;
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+.admin-login-card h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+}
+
+.admin-login-card > p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.admin-error {
+  margin-top: 1rem !important;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5 !important;
+  font-size: 0.875rem !important;
+}
+
+.admin-form {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: #cbd5e1;
+}
+
+.admin-form input {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.admin-form button {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: none;
+  background: #22c55e;
+  color: #052e16;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.admin-form button:hover {
+  background: #16a34a;
+}
+
+.admin-login-footer {
+  margin-top: 1.5rem !important;
+  font-size: 0.875rem;
+}
+
+.admin-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  width: 240px;
+  padding: 1.5rem;
+  border-right: 1px solid #334155;
+  background: #1e293b;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-brand {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #22c55e;
+}
+
+.admin-nav {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.admin-nav a {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.admin-nav a:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.admin-sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid #334155;
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.admin-sidebar-footer a {
+  color: #64748b;
+}
+
+.admin-logout {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.admin-logout:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.admin-main {
+  flex: 1;
+  padding: 2rem;
+  overflow-x: auto;
+}
+
+.admin-page-title {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.admin-subtitle {
+  margin: 0.5rem 0 0;
+  color: #94a3b8;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.admin-stat-card {
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+.admin-stat-label {
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.admin-stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 0.25rem;
+}
+
+.admin-stat-sub {
+  color: #64748b;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.admin-section {
+  margin-top: 2rem;
+}
+
+.admin-section h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #1e293b;
+}
+
+.admin-table th {
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: #22c55e;
+  color: #052e16;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.admin-btn:hover {
+  background: #16a34a;
+}
+
+.admin-btn-secondary {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.admin-btn-secondary:hover {
+  background: #475569;
+}
