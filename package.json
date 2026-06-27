@@ -13,6 +13,7 @@
     "sync": "tsx scripts/run-sync.ts",
     "enrich-images": "tsx scripts/enrich-images.ts",
     "enrich-images:og": "tsx scripts/enrich-images.ts -- --og-fallback",
+    "seed-blog": "tsx scripts/seed-blog.ts",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
