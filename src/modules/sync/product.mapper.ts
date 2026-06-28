@@ -69,9 +69,7 @@ export function mapZohoItemToProductData(item: ZohoItem, categoryId: string, bra
     cycleLife: parseInt(extractCustomField(item, /cycle/i) ?? "6000", 10) || 6000,
     weightLbs: parseFloat(extractCustomField(item, /weight|lbs/i) ?? "0") || undefined,
     energyScore: computeEnergyScore(item),
-    images: item.image_document_id
-      ? [`https://www.zohoapis.com/books/v3/documents/${item.image_document_id}`]
-      : [],
+    images: [],
     features: defaultFeatures(item),
     specifications: defaultSpecs(item),
   }

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { NotFoundError } from "@/lib/errors"
 import type { Prisma } from "@prisma/client"
 import { getEffectiveAffiliateUrl } from "@/lib/affiliate-url"
+import { filterPublicProductImageUrls, resolveProductImageUrl } from "@/lib/product-image-url"
 
 const productInclude = {
   brand: true,
@@ -17,7 +18,8 @@ const productInclude = {
 export type ProductWithRelations = Prisma.ProductGetPayload<{ include: typeof productInclude }>
 
 export function serializeProduct(p: ProductWithRelations) {
-  const primaryImage = p.images.find((i) => i.isPrimary) ?? p.images[0]
+  const imageUrls = filterPublicProductImageUrls(p.images.map((i) => i.url))
+  const image = resolveProductImageUrl(p.images.map((i) => i.url))
   return {
     id: p.id,
     slug: p.slug,
@@ -26,8 +28,8 @@ export function serializeProduct(p: ProductWithRelations) {
     brandId: p.brand?.slug ?? "",
     categoryId: p.category?.slug ?? "",
     category: p.category?.name ?? "Uncategorized",
-    image: primaryImage?.url ?? null,
-    images: p.images.map((i) => i.url),
+    image,
+    images: imageUrls.length ? imageUrls : [image],
     capacity: p.capacity ?? "",
     voltage: p.voltage ?? "",
     price: Number(p.price),

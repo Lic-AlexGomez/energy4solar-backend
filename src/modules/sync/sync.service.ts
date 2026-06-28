@@ -5,6 +5,7 @@ import type { ZohoItem } from "@/modules/zoho/types"
 import { SyncStatus } from "@prisma/client"
 import { loadWooCommerceImageCatalog, resolveWooProductMedia } from "../woocommerce/images"
 import type { WooImageCatalog } from "../woocommerce/types"
+import { filterPublicProductImageUrls } from "@/lib/product-image-url"
 import {
   buildSearchDocument,
   inferBrandName,
@@ -100,7 +101,9 @@ async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Prom
 
   const wooMedia = await resolveWooProductMedia(mapped.sku, wooCatalog)
   if (wooMedia.images.length) {
-    mapped.images = wooMedia.images
+    mapped.images = filterPublicProductImageUrls(wooMedia.images)
+  } else {
+    mapped.images = filterPublicProductImageUrls(mapped.images)
   }
   if (wooMedia.permalink) {
     mapped.manufacturerUrl = wooMedia.permalink
