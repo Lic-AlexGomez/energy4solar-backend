@@ -1,6 +1,14 @@
 import type { NextConfig } from "next"
 
+/** When admin is proxied via www.energy4solar.com/admin, assets must load from this origin. */
+const backendPublicUrl = (
+  process.env.BACKEND_PUBLIC_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "")
+).replace(/\/$/, "")
+
 const nextConfig: NextConfig = {
+  assetPrefix:
+    process.env.NODE_ENV === "production" && backendPublicUrl ? backendPublicUrl : undefined,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.zoho.com" },
