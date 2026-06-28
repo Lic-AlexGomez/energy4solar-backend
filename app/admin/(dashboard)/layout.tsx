@@ -6,6 +6,10 @@ import "../admin.css"
 
 export const dynamic = "force-dynamic"
 
+export const metadata = {
+  robots: { index: false, follow: false },
+}
+
 export default async function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   await requireAdminPage()
   const siteUrl = process.env.SITE_URL ?? "https://www.energy4solar.com"

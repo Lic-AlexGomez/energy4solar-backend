@@ -2,12 +2,17 @@ import Link from "next/link"
 import { loginAction } from "./actions"
 import "../admin.css"
 
+export const metadata = {
+  robots: { index: false, follow: false },
+}
+
 export default async function AdminLoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>
 }) {
   const { error } = await searchParams
+  const siteUrl = process.env.SITE_URL ?? "https://www.energy4solar.com"
 
   return (
     <main className="admin-login">
@@ -27,7 +32,7 @@ export default async function AdminLoginPage({
           <button type="submit">Sign in</button>
         </form>
         <p className="admin-login-footer">
-          <Link href="/">← Back to API home</Link>
+          <Link href={siteUrl}>← Back to site</Link>
         </p>
       </div>
     </main>
