@@ -2,22 +2,25 @@ import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { StatCard } from "../components/stat-card"
 import { commissionService } from "@/modules/admin/commission.service"
+import { getSiteTrafficStats } from "@/modules/admin/site-analytics.service"
 
 function money(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n)
 }
 
+function fmt(n: number) {
+  return n.toLocaleString("en-US")
+}
+
 export default async function AdminOverviewPage() {
-  const [productCount, visibleCount, withImages, categoryCount, guideCount, blogCount, lastSync, commissions] =
+  const [productCount, visibleCount, withImages, lastSync, commissions, traffic] =
     await Promise.all([
       prisma.product.count(),
       prisma.product.count({ where: { isVisible: true } }),
       prisma.product.count({ where: { images: { some: {} } } }),
-      prisma.category.count(),
-      prisma.guide.count({ where: { published: true } }),
-      prisma.blogPost.count({ where: { published: true } }),
       prisma.syncLog.findFirst({ orderBy: { startedAt: "desc" } }),
       commissionService.getDashboard(),
+      getSiteTrafficStats(),
     ])
 
   const hidden = productCount - visibleCount
@@ -37,10 +40,15 @@ export default async function AdminOverviewPage() {
 
       <div className="admin-stats">
         <StatCard
+          label="Visitors (7 days)"
+          value={fmt(traffic.visitors7d)}
+          sub={`${fmt(traffic.pageviews7d)} pageviews`}
+          accent
+        />
+        <StatCard
           label="My commissions"
           value={money(commissions.totalAmount)}
           sub={`${commissions.totalRecords} orders · ${money(commissions.last30Amount)} last 30d`}
-          accent
         />
         <StatCard label="Paid" value={money(commissions.paidAmount)} />
         <StatCard label="Pending" value={money(commissions.pendingAmount)} />

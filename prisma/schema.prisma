@@ -261,6 +261,25 @@ model AffiliateClick {
   @@schema("energy4solar")
 }
 
+// ─── Site traffic (pageviews for admin dashboard) ───────────────────────────
+
+model SitePageview {
+  id         String   @id @default(cuid())
+  path       String
+  referrer   String?
+  utmSource  String?
+  deviceType String?
+  country    String?
+  sessionId  String
+  source     String   @default("site")
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([sessionId])
+  @@index([path])
+  @@schema("energy4solar")
+}
+
 // ─── Price history & search ─────────────────────────────────────────────────
 
 model PriceHistory {

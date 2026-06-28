@@ -422,6 +422,29 @@
   margin-top: 1rem;
 }
 
+.admin-stats-traffic {
+  margin-bottom: 1rem;
+}
+
+.admin-section {
+  margin-top: 1.25rem;
+}
+
+.admin-traffic-note {
+  margin: 0.75rem 0 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--admin-muted);
+}
+
+.admin-traffic-note a {
+  color: var(--admin-accent-text);
+}
+
+.admin-path-code {
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+
 .admin-stat-card {
   padding: 0.85rem 1rem;
   border-radius: var(--admin-radius);
