@@ -1157,6 +1157,38 @@
   color: var(--admin-muted);
 }
 
+.admin-price-bulk-preview-muted {
+  opacity: 0.85;
+}
+
+.admin-price-bulk-pending {
+  opacity: 0.92;
+}
+
+.admin-price-bulk-pending .admin-price-bulk-actions button {
+  cursor: wait;
+}
+
+.admin-price-bulk-feedback {
+  margin: 0.75rem 0 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--admin-radius-sm);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.admin-price-bulk-success {
+  background: var(--admin-accent-dim);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: var(--admin-accent-text);
+}
+
+.admin-price-bulk-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fecaca;
+}
+
 .admin-price-bulk-message {
   color: var(--admin-accent-text);
 }

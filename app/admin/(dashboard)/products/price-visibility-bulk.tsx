@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import {
   bulkHideByPriceAction,
@@ -10,12 +11,14 @@ import {
 type Preview = { total: number; visible: number; hidden: number }
 
 export function PriceVisibilityBulk() {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [hideZero, setHideZero] = useState(false)
   const [hideBelow, setHideBelow] = useState("")
   const [hideAbove, setHideAbove] = useState("")
   const [preview, setPreview] = useState<Preview | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   function formData() {
@@ -26,43 +29,94 @@ export function PriceVisibilityBulk() {
     return fd
   }
 
+  function invalidatePreview() {
+    setPreview(null)
+    setMessage(null)
+    setError(null)
+  }
+
+  async function fetchPreview(): Promise<Preview> {
+    const result = await previewPriceVisibilityAction(formData())
+    setPreview(result)
+    return result
+  }
+
   function runPreview() {
     setMessage(null)
+    setError(null)
     startTransition(async () => {
-      const result = await previewPriceVisibilityAction(formData())
-      setPreview(result)
+      try {
+        await fetchPreview()
+      } catch {
+        setError("Preview failed. Refresh the page and try again.")
+      }
     })
   }
 
   function applyHide() {
-    if (!preview?.visible) return
-    if (!confirm(`Hide ${preview.visible} visible product(s) matching these rules?`)) return
+    if (!hasRules) return
 
     setMessage(null)
+    setError(null)
     startTransition(async () => {
-      const { updated } = await bulkHideByPriceAction(formData())
-      setMessage(`Hidden ${updated} product(s).`)
-      const result = await previewPriceVisibilityAction(formData())
-      setPreview(result)
+      try {
+        const current = preview ?? (await fetchPreview())
+
+        if (!current.total) {
+          setMessage("No products match these price rules.")
+          return
+        }
+        if (!current.visible) {
+          setMessage(
+            `${current.total} product(s) match but all are already hidden. Use “Show matching” to restore them.`,
+          )
+          return
+        }
+
+        if (!confirm(`Hide ${current.visible} visible product(s) matching these rules?`)) return
+
+        const { updated } = await bulkHideByPriceAction(formData())
+        setMessage(`Done — hidden ${updated} product(s). The table below will update.`)
+        router.refresh()
+        await fetchPreview()
+      } catch {
+        setError("Could not hide products. Refresh the page and try again.")
+      }
     })
   }
 
   function applyShow() {
-    if (!preview?.hidden) return
-    if (!confirm(`Show ${preview.hidden} hidden product(s) matching these rules?`)) return
+    if (!hasRules) return
 
     setMessage(null)
+    setError(null)
     startTransition(async () => {
-      const { updated } = await bulkShowByPriceAction(formData())
-      setMessage(`Restored visibility for ${updated} product(s).`)
-      const result = await previewPriceVisibilityAction(formData())
-      setPreview(result)
+      try {
+        const current = preview ?? (await fetchPreview())
+
+        if (!current.total) {
+          setMessage("No products match these price rules.")
+          return
+        }
+        if (!current.hidden) {
+          setMessage(`${current.total} product(s) match and all are already visible.`)
+          return
+        }
+
+        if (!confirm(`Show ${current.hidden} hidden product(s) matching these rules?`)) return
+
+        const { updated } = await bulkShowByPriceAction(formData())
+        setMessage(`Done — restored visibility for ${updated} product(s).`)
+        router.refresh()
+        await fetchPreview()
+      } catch {
+        setError("Could not restore products. Refresh the page and try again.")
+      }
     })
   }
 
   function applyPreset(preset: "zero" | "under-1000") {
-    setMessage(null)
-    setPreview(null)
+    invalidatePreview()
     if (preset === "zero") {
       setHideZero(true)
       setHideBelow("")
@@ -77,7 +131,7 @@ export function PriceVisibilityBulk() {
   const hasRules = hideZero || hideBelow.trim() !== "" || hideAbove.trim() !== ""
 
   return (
-    <div className="admin-panel admin-price-bulk">
+    <div className={`admin-panel admin-price-bulk${pending ? " admin-price-bulk-pending" : ""}`}>
       <button
         type="button"
         className="admin-price-bulk-toggle"
@@ -94,7 +148,8 @@ export function PriceVisibilityBulk() {
         <div className="admin-price-bulk-body">
           <p className="admin-price-bulk-hint">
             Bulk hide or restore products by price. Rules combine with OR — e.g. hide $0{" "}
-            <em>or</em> anything under $1,000.
+            <em>or</em> anything under $3,000. Click <strong>Preview</strong> or go straight to{" "}
+            <strong>Hide matching</strong> (preview runs automatically).
           </p>
 
           <div className="admin-price-bulk-presets">
@@ -124,8 +179,7 @@ export function PriceVisibilityBulk() {
                 checked={hideZero}
                 onChange={(e) => {
                   setHideZero(e.target.checked)
-                  setPreview(null)
-                  setMessage(null)
+                  invalidatePreview()
                 }}
               />
               Hide products priced at <strong>$0</strong>
@@ -139,12 +193,11 @@ export function PriceVisibilityBulk() {
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="e.g. 1000"
+                  placeholder="e.g. 3000"
                   value={hideBelow}
                   onChange={(e) => {
                     setHideBelow(e.target.value)
-                    setPreview(null)
-                    setMessage(null)
+                    invalidatePreview()
                   }}
                 />
               </div>
@@ -162,8 +215,7 @@ export function PriceVisibilityBulk() {
                   value={hideAbove}
                   onChange={(e) => {
                     setHideAbove(e.target.value)
-                    setPreview(null)
-                    setMessage(null)
+                    invalidatePreview()
                   }}
                 />
               </div>
@@ -177,21 +229,22 @@ export function PriceVisibilityBulk() {
               onClick={runPreview}
               disabled={pending || !hasRules}
             >
-              Preview
+              {pending && !preview ? "Loading…" : "Preview"}
             </button>
             <button
               type="button"
               className="admin-btn admin-btn-sm admin-btn-warn"
               onClick={applyHide}
-              disabled={pending || !preview?.visible}
+              disabled={pending || !hasRules}
+              title={!hasRules ? "Set at least one price rule" : "Preview runs automatically if needed"}
             >
-              Hide matching
+              {pending ? "Working…" : "Hide matching"}
             </button>
             <button
               type="button"
               className="admin-btn admin-btn-sm admin-btn-ghost"
               onClick={applyShow}
-              disabled={pending || !preview?.hidden}
+              disabled={pending || !hasRules}
             >
               Show matching
             </button>
@@ -205,9 +258,23 @@ export function PriceVisibilityBulk() {
               </span>{" "}
               · <strong>{preview.hidden}</strong> already hidden
             </p>
+          ) : hasRules ? (
+            <p className="admin-price-bulk-preview admin-price-bulk-preview-muted">
+              Set your rules, then Preview or Hide matching.
+            </p>
           ) : null}
 
-          {message ? <p className="admin-price-bulk-message">{message}</p> : null}
+          {error ? (
+            <p className="admin-price-bulk-feedback admin-price-bulk-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          {message ? (
+            <p className="admin-price-bulk-feedback admin-price-bulk-success" role="status">
+              {message}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>
