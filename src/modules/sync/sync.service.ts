@@ -111,15 +111,17 @@ async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Prom
 
   const existing = await prisma.product.findUnique({
     where: { zohoItemId: mapped.zohoItemId },
-    select: { id: true, price: true, slug: true, affiliateUrlOverride: true },
+    select: { id: true, price: true, slug: true, affiliateUrlOverride: true, contentLocked: true },
   })
 
   const slug =
     existing?.slug ??
     (await uniqueProductSlug(mapped.name, async (s) => Boolean(await prisma.product.findUnique({ where: { slug: s } }))))
 
+  const locked = existing?.contentLocked ?? false
+
   let priceChanged = false
-  if (existing && Number(existing.price) !== mapped.price) {
+  if (existing && !locked && Number(existing.price) !== mapped.price) {
     priceChanged = true
     await prisma.priceHistory.create({
       data: { productId: existing.id, price: mapped.price, source: "zoho_sync" },
@@ -130,23 +132,27 @@ async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Prom
     ? await prisma.product.update({
         where: { id: existing.id },
         data: {
-          name: mapped.name,
+          ...(locked
+            ? {}
+            : {
+                name: mapped.name,
+                shortDescription: mapped.shortDescription,
+                description: mapped.description,
+                price: mapped.price,
+                capacity: mapped.capacity,
+                voltage: mapped.voltage,
+                chemistry: mapped.chemistry,
+                warranty: mapped.warranty,
+                cycleLife: mapped.cycleLife,
+                weightLbs: mapped.weightLbs,
+              }),
           sku: mapped.sku,
-          shortDescription: mapped.shortDescription,
-          description: mapped.description,
-          price: mapped.price,
           inStock: mapped.inStock,
           stockOnHand: mapped.stockOnHand,
           affiliateUrl: mapped.affiliateUrl,
           manufacturerUrl: mapped.manufacturerUrl,
           categoryId: mapped.categoryId,
           brandId: mapped.brandId,
-          capacity: mapped.capacity,
-          voltage: mapped.voltage,
-          chemistry: mapped.chemistry,
-          warranty: mapped.warranty,
-          cycleLife: mapped.cycleLife,
-          weightLbs: mapped.weightLbs,
           energyScore: mapped.energyScore,
           zohoRaw: mapped.zohoRaw,
           lastSyncedAt: new Date(),
@@ -178,32 +184,43 @@ async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Prom
         },
       })
 
-  await prisma.productImage.deleteMany({ where: { productId: product.id } })
-  if (mapped.images.length) {
-    await prisma.productImage.createMany({
-      data: mapped.images.map((url, i) => ({
-        productId: product.id,
-        url,
-        sortOrder: i,
-        isPrimary: i === 0,
-      })),
-    })
+  if (!locked) {
+    await prisma.productImage.deleteMany({ where: { productId: product.id } })
+    if (mapped.images.length) {
+      await prisma.productImage.createMany({
+        data: mapped.images.map((url, i) => ({
+          productId: product.id,
+          url,
+          sortOrder: i,
+          isPrimary: i === 0,
+        })),
+      })
+    }
   }
 
-  await prisma.productSpecification.deleteMany({ where: { productId: product.id } })
-  await prisma.productSpecification.createMany({
-    data: mapped.specifications.map((s, i) => ({
-      productId: product.id,
-      label: s.label,
-      value: s.value,
-      sortOrder: i,
-    })),
-  })
+  if (!locked) {
+    await prisma.productSpecification.deleteMany({ where: { productId: product.id } })
+    await prisma.productSpecification.createMany({
+      data: mapped.specifications.map((s, i) => ({
+        productId: product.id,
+        label: s.label,
+        value: s.value,
+        sortOrder: i,
+      })),
+    })
 
-  await prisma.productFeature.deleteMany({ where: { productId: product.id } })
-  await prisma.productFeature.createMany({
-    data: mapped.features.map((text, i) => ({ productId: product.id, text, sortOrder: i })),
-  })
+    await prisma.productFeature.deleteMany({ where: { productId: product.id } })
+    await prisma.productFeature.createMany({
+      data: mapped.features.map((text, i) => ({ productId: product.id, text, sortOrder: i })),
+    })
+
+    const doc = buildSearchDocument(mapped.name, mapped.description, mapped.sku, brandName)
+    await prisma.searchIndex.upsert({
+      where: { productId: product.id },
+      create: { productId: product.id, document: doc, tokens: tokenizeSearch(doc) },
+      update: { document: doc, tokens: tokenizeSearch(doc) },
+    })
+  }
 
   const existingLink = await prisma.affiliateLink.findFirst({
     where: { productId: product.id, isPrimary: true },
@@ -219,13 +236,6 @@ async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Prom
       data: { productId: product.id, url: linkUrl, isPrimary: true },
     })
   }
-
-  const doc = buildSearchDocument(mapped.name, mapped.description, mapped.sku, brandName)
-  await prisma.searchIndex.upsert({
-    where: { productId: product.id },
-    create: { productId: product.id, document: doc, tokens: tokenizeSearch(doc) },
-    update: { document: doc, tokens: tokenizeSearch(doc) },
-  })
 
   await prisma.brand.update({
     where: { id: brand.id },

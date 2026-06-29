@@ -1,9 +1,12 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getEffectiveAffiliateUrl } from "@/lib/affiliate-url"
+import { isPublicProductImageUrl } from "@/lib/product-image-url"
+import { buildSearchDocument, tokenizeSearch } from "@/modules/sync/product.mapper"
 import type { AdminProductSort } from "./products-query"
 import { parseAdminProductSort } from "./products-query"
 
@@ -144,6 +147,148 @@ export async function resetAffiliateUrlAction(formData: FormData) {
   })
 
   revalidatePath("/admin/products")
+}
+
+export type AdminProductEdit = {
+  id: string
+  slug: string
+  sku: string | null
+  name: string
+  shortDescription: string
+  description: string
+  price: number
+  capacity: string | null
+  voltage: string | null
+  chemistry: string | null
+  warranty: string | null
+  cycleLife: number | null
+  weightLbs: number | null
+  badge: string | null
+  inStock: boolean
+  isVisible: boolean
+  contentLocked: boolean
+  imageUrl: string
+  brandName: string | null
+  categoryName: string | null
+}
+
+export async function getAdminProductForEdit(id: string): Promise<AdminProductEdit | null> {
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      brand: { select: { name: true } },
+      category: { select: { name: true } },
+      images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
+    },
+  })
+  if (!product) return null
+
+  const primary = product.images.find((i) => i.isPrimary) ?? product.images[0]
+
+  return {
+    id: product.id,
+    slug: product.slug,
+    sku: product.sku,
+    name: product.name,
+    shortDescription: product.shortDescription,
+    description: product.description,
+    price: Number(product.price),
+    capacity: product.capacity,
+    voltage: product.voltage,
+    chemistry: product.chemistry,
+    warranty: product.warranty,
+    cycleLife: product.cycleLife,
+    weightLbs: product.weightLbs,
+    badge: product.badge,
+    inStock: product.inStock,
+    isVisible: product.isVisible,
+    contentLocked: product.contentLocked,
+    imageUrl: primary?.url ?? "",
+    brandName: product.brand?.name ?? null,
+    categoryName: product.category?.name ?? null,
+  }
+}
+
+function parseOptionalNumber(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const n = Number(trimmed)
+  return Number.isFinite(n) ? n : null
+}
+
+export async function updateProductAction(formData: FormData) {
+  const productId = String(formData.get("productId") ?? "")
+  const name = String(formData.get("name") ?? "").trim()
+  if (!productId || !name) return
+
+  const priceRaw = String(formData.get("price") ?? "").trim()
+  const price = Number(priceRaw)
+  if (!Number.isFinite(price) || price < 0) return
+
+  const imageUrl = String(formData.get("imageUrl") ?? "").trim()
+  const contentLocked = formData.get("contentLocked") === "true"
+  const inStock = formData.get("inStock") === "true"
+  const isVisible = formData.get("isVisible") === "true"
+
+  const existing = await prisma.product.findUnique({
+    where: { id: productId },
+    include: { brand: { select: { name: true } } },
+  })
+  if (!existing) return
+
+  const shortDescription = String(formData.get("shortDescription") ?? "")
+  const description = String(formData.get("description") ?? "")
+  const capacity = String(formData.get("capacity") ?? "").trim() || null
+  const voltage = String(formData.get("voltage") ?? "").trim() || null
+  const chemistry = String(formData.get("chemistry") ?? "").trim() || null
+  const warranty = String(formData.get("warranty") ?? "").trim() || null
+  const badge = String(formData.get("badge") ?? "").trim() || null
+  const cycleLife = parseOptionalNumber(String(formData.get("cycleLife") ?? ""))
+  const weightLbs = parseOptionalNumber(String(formData.get("weightLbs") ?? ""))
+
+  await prisma.product.update({
+    where: { id: productId },
+    data: {
+      name,
+      shortDescription,
+      description,
+      price,
+      capacity,
+      voltage,
+      chemistry,
+      warranty,
+      cycleLife,
+      weightLbs,
+      badge,
+      inStock,
+      isVisible,
+      contentLocked,
+    },
+  })
+
+  if (imageUrl) {
+    if (!isPublicProductImageUrl(imageUrl)) {
+      redirect(`/admin/products/${productId}?error=invalid-image`)
+    }
+
+    await prisma.productImage.deleteMany({ where: { productId } })
+    await prisma.productImage.create({
+      data: { productId, url: imageUrl, sortOrder: 0, isPrimary: true },
+    })
+  }
+
+  const brandName = existing.brand?.name ?? undefined
+  const doc = buildSearchDocument(name, description, existing.sku ?? undefined, brandName)
+  await prisma.searchIndex.upsert({
+    where: { productId },
+    create: { productId, document: doc, tokens: tokenizeSearch(doc) },
+    update: { document: doc, tokens: tokenizeSearch(doc) },
+  })
+
+  revalidatePath("/admin/products")
+  revalidatePath(`/admin/products/${productId}`)
+  revalidatePath("/admin")
+  redirect(`/admin/products/${productId}?saved=1`)
 }
 
 export type AdminProductRow = {

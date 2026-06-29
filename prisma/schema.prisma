@@ -67,6 +67,7 @@ model Product {
   inStock          Boolean  @default(true)
   stockOnHand      Int?
   isVisible        Boolean  @default(true)
+  contentLocked    Boolean  @default(false)
   affiliateUrl     String
   affiliateUrlOverride String?
   manufacturerUrl  String?
