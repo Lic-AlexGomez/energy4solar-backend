@@ -1,15 +1,19 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { isSupabaseStorageConfigured } from "@/lib/supabase-admin"
 import { getAdminProductForEdit } from "../actions"
 import { ProductEditForm } from "../product-edit-form"
+import {
+  getProductImageUploadProvider,
+  isProductImageUploadConfigured,
+} from "@/modules/storage/product-image-storage"
 
 const UPLOAD_ERRORS: Record<string, string> = {
   "invalid-image": "Image URL must be a valid public http(s) link. Zoho document URLs are not supported.",
-  "storage-not-configured": "Supabase Storage is not configured. Add SUPABASE_SERVICE_ROLE_KEY to the backend.",
+  "storage-not-configured":
+    "Photo upload is not configured. Add Cloudinary env vars (recommended) or SUPABASE_SERVICE_ROLE_KEY on the backend.",
   "invalid-file-type": "Only JPEG, PNG, WebP, GIF and AVIF images are allowed.",
   "file-too-large": "Image file is too large. Maximum size is 4 MB.",
-  "upload-failed": "Could not upload the image to Supabase Storage. Check bucket permissions and try again.",
+  "upload-failed": "Could not upload the image. Check Cloudinary or Supabase Storage settings and try again.",
 }
 
 export default async function AdminProductEditPage({
@@ -25,7 +29,8 @@ export default async function AdminProductEditPage({
   if (!product) notFound()
 
   const siteUrl = process.env.SITE_URL ?? "https://www.energy4solar.com"
-  const storageEnabled = isSupabaseStorageConfigured()
+  const storageEnabled = isProductImageUploadConfigured()
+  const uploadProvider = getProductImageUploadProvider()
 
   return (
     <div className="admin-page">
@@ -56,7 +61,7 @@ export default async function AdminProductEditPage({
       ) : null}
 
       <section className="admin-panel admin-section">
-        <ProductEditForm product={product} siteUrl={siteUrl} storageEnabled={storageEnabled} />
+        <ProductEditForm product={product} siteUrl={siteUrl} storageEnabled={storageEnabled} uploadProvider={uploadProvider} />
       </section>
     </div>
   )

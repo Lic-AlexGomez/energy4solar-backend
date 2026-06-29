@@ -8,10 +8,12 @@ export function ProductEditForm({
   product,
   siteUrl,
   storageEnabled,
+  uploadProvider,
 }: {
   product: AdminProductEdit
   siteUrl: string
   storageEnabled: boolean
+  uploadProvider: "cloudinary" | "supabase" | null
 }) {
   const [imageUrl, setImageUrl] = useState(product.imageUrl)
   const [filePreview, setFilePreview] = useState<string | null>(null)
@@ -134,12 +136,15 @@ export function ProductEditForm({
             </label>
           ) : (
             <p className="admin-hint admin-hint-warn">
-              File upload is off — set <code>SUPABASE_SERVICE_ROLE_KEY</code> on the backend to enable Supabase Storage.
+              File upload is off — add <code>CLOUDINARY_*</code> vars (recommended) or <code>SUPABASE_SERVICE_ROLE_KEY</code> on
+              the backend.
             </p>
           )}
           <p className="admin-hint">
             {storageEnabled
-              ? "Upload saves to Supabase Storage (max 4 MB). Or paste an external URL below."
+              ? uploadProvider === "cloudinary"
+                ? "Upload saves to Cloudinary CDN (max 4 MB). Or paste an external URL below."
+                : "Upload saves to Supabase Storage (max 4 MB). Or paste an external URL below."
               : "Paste a public image URL below."}
           </p>
 

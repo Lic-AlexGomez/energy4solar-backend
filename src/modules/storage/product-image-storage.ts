@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto"
-import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import { v2 as cloudinary } from "cloudinary"
+import { getCloudinaryConfig, isCloudinaryConfigured } from "@/lib/cloudinary"
+import { getSupabaseAdmin, isSupabaseStorageConfigured } from "@/lib/supabase-admin"
 
 export const PRODUCT_IMAGES_BUCKET = "product-images"
 const MAX_BYTES = 4 * 1024 * 1024
@@ -31,7 +33,17 @@ function sanitizeSlug(slug: string): string {
   return slug.replace(/[^a-zA-Z0-9-_]/g, "-").replace(/-+/g, "-").slice(0, 80) || "product"
 }
 
-async function ensureBucket() {
+export function isProductImageUploadConfigured(): boolean {
+  return isCloudinaryConfigured() || isSupabaseStorageConfigured()
+}
+
+export function getProductImageUploadProvider(): "cloudinary" | "supabase" | null {
+  if (isCloudinaryConfigured()) return "cloudinary"
+  if (isSupabaseStorageConfigured()) return "supabase"
+  return null
+}
+
+async function ensureSupabaseBucket() {
   const supabase = getSupabaseAdmin()
   if (!supabase) throw new Error("storage-not-configured")
 
@@ -48,6 +60,54 @@ async function ensureBucket() {
   return supabase
 }
 
+async function uploadToCloudinary(productSlug: string, file: File): Promise<string> {
+  const config = getCloudinaryConfig()
+  if (!config) throw new Error("storage-not-configured")
+
+  cloudinary.config(config)
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const publicId = `${sanitizeSlug(productSlug)}-${Date.now()}-${randomBytes(4).toString("hex")}`
+
+  const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "energy4solar/products",
+        public_id: publicId,
+        resource_type: "image",
+        overwrite: false,
+      },
+      (error, uploadResult) => {
+        if (error || !uploadResult?.secure_url) {
+          reject(error ?? new Error("Cloudinary upload returned no URL"))
+          return
+        }
+        resolve({ secure_url: uploadResult.secure_url })
+      },
+    )
+    stream.end(buffer)
+  })
+
+  return result.secure_url
+}
+
+async function uploadToSupabase(productSlug: string, file: File): Promise<string> {
+  const client = await ensureSupabaseBucket()
+  const ext = extensionForMime(file.type)
+  const objectName = `${Date.now()}-${randomBytes(4).toString("hex")}.${ext}`
+  const path = `${sanitizeSlug(productSlug)}/${objectName}`
+  const buffer = Buffer.from(await file.arrayBuffer())
+
+  const { error: uploadError } = await client.storage.from(PRODUCT_IMAGES_BUCKET).upload(path, buffer, {
+    contentType: file.type,
+    cacheControl: "31536000",
+    upsert: false,
+  })
+  if (uploadError) throw uploadError
+
+  const { data } = client.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path)
+  return data.publicUrl
+}
+
 export type ProductImageUploadError =
   | "storage-not-configured"
   | "invalid-file-type"
@@ -58,30 +118,15 @@ export async function uploadProductImageFile(
   productSlug: string,
   file: File,
 ): Promise<{ url: string } | { error: ProductImageUploadError; message?: string }> {
-  const supabase = getSupabaseAdmin()
-  if (!supabase) return { error: "storage-not-configured" }
-
+  if (!isProductImageUploadConfigured()) return { error: "storage-not-configured" }
   if (!ALLOWED_TYPES.has(file.type)) return { error: "invalid-file-type" }
   if (file.size > MAX_BYTES) return { error: "file-too-large" }
 
   try {
-    const client = await ensureBucket()
-    const ext = extensionForMime(file.type)
-    const objectName = `${Date.now()}-${randomBytes(4).toString("hex")}.${ext}`
-    const path = `${sanitizeSlug(productSlug)}/${objectName}`
-    const buffer = Buffer.from(await file.arrayBuffer())
-
-    const { error: uploadError } = await client.storage.from(PRODUCT_IMAGES_BUCKET).upload(path, buffer, {
-      contentType: file.type,
-      cacheControl: "31536000",
-      upsert: false,
-    })
-    if (uploadError) {
-      return { error: "upload-failed", message: uploadError.message }
-    }
-
-    const { data } = client.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path)
-    return { url: data.publicUrl }
+    const url = isCloudinaryConfigured()
+      ? await uploadToCloudinary(productSlug, file)
+      : await uploadToSupabase(productSlug, file)
+    return { url }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return { error: "upload-failed", message }

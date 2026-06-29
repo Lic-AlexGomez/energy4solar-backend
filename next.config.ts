@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "bigbattery.com" },
       { protocol: "https", hostname: "**.bigbattery.com" },
       { protocol: "https", hostname: "**.supabase.co" },
+      { protocol: "https", hostname: "res.cloudinary.com" },
     ],
   },
 }
