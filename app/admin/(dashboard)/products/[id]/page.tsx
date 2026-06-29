@@ -1,7 +1,16 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { isSupabaseStorageConfigured } from "@/lib/supabase-admin"
 import { getAdminProductForEdit } from "../actions"
 import { ProductEditForm } from "../product-edit-form"
+
+const UPLOAD_ERRORS: Record<string, string> = {
+  "invalid-image": "Image URL must be a valid public http(s) link. Zoho document URLs are not supported.",
+  "storage-not-configured": "Supabase Storage is not configured. Add SUPABASE_SERVICE_ROLE_KEY to the backend.",
+  "invalid-file-type": "Only JPEG, PNG, WebP, GIF and AVIF images are allowed.",
+  "file-too-large": "Image file is too large. Maximum size is 4 MB.",
+  "upload-failed": "Could not upload the image to Supabase Storage. Check bucket permissions and try again.",
+}
 
 export default async function AdminProductEditPage({
   params,
@@ -16,6 +25,7 @@ export default async function AdminProductEditPage({
   if (!product) notFound()
 
   const siteUrl = process.env.SITE_URL ?? "https://www.energy4solar.com"
+  const storageEnabled = isSupabaseStorageConfigured()
 
   return (
     <div className="admin-page">
@@ -39,14 +49,14 @@ export default async function AdminProductEditPage({
           Product saved successfully.
         </div>
       ) : null}
-      {error === "invalid-image" ? (
+      {error && UPLOAD_ERRORS[error] ? (
         <div className="admin-alert admin-alert-error" role="alert">
-          Image URL must be a valid public http(s) link. Zoho document URLs are not supported.
+          {UPLOAD_ERRORS[error]}
         </div>
       ) : null}
 
       <section className="admin-panel admin-section">
-        <ProductEditForm product={product} siteUrl={siteUrl} />
+        <ProductEditForm product={product} siteUrl={siteUrl} storageEnabled={storageEnabled} />
       </section>
     </div>
   )

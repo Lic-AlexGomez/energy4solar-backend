@@ -7,6 +7,11 @@ const backendPublicUrl = (
 ).replace(/\/$/, "")
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "4mb",
+    },
+  },
   assetPrefix:
     process.env.NODE_ENV === "production" && backendPublicUrl ? backendPublicUrl : undefined,
   serverExternalPackages: ["ssh2", "ssh2-sftp-client"],
@@ -16,6 +21,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.zohoapis.com" },
       { protocol: "https", hostname: "bigbattery.com" },
       { protocol: "https", hostname: "**.bigbattery.com" },
+      { protocol: "https", hostname: "**.supabase.co" },
     ],
   },
 }

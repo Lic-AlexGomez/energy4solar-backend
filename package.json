@@ -16,10 +16,12 @@
     "enrich-images:fix": "tsx scripts/enrich-images.ts -- --fix-broken --og-fallback",
     "test-images": "tsx scripts/test-image-resolve.ts -- --limit=10",
     "seed-blog": "tsx scripts/seed-blog.ts",
+    "setup-product-storage": "tsx scripts/setup-product-storage.ts",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
+    "@supabase/supabase-js": "^2.108.2",
     "@tanstack/react-query": "^5.80.7",
     "basic-ftp": "^6.0.1",
     "next": "^16.2.6",

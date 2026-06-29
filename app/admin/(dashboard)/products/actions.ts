@@ -5,8 +5,10 @@ import { redirect } from "next/navigation"
 import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getEffectiveAffiliateUrl } from "@/lib/affiliate-url"
+import { isAdminAuthenticated } from "@/lib/admin-auth"
 import { isPublicProductImageUrl, normalizeProductImageUrl } from "@/lib/product-image-url"
 import { buildSearchDocument, tokenizeSearch } from "@/modules/sync/product.mapper"
+import { uploadProductImageFile } from "@/modules/storage/product-image-storage"
 import type { AdminProductSort } from "./products-query"
 import { parseAdminProductSort } from "./products-query"
 
@@ -217,6 +219,8 @@ function parseOptionalNumber(raw: string): number | null {
 }
 
 export async function updateProductAction(formData: FormData) {
+  if (!(await isAdminAuthenticated())) redirect("/admin/login")
+
   const productId = String(formData.get("productId") ?? "")
   const name = String(formData.get("name") ?? "").trim()
   if (!productId || !name) return
@@ -266,16 +270,26 @@ export async function updateProductAction(formData: FormData) {
     },
   })
 
-  if (imageUrl) {
+  const imageFile = formData.get("imageFile")
+  let finalImageUrl: string | null = null
+
+  if (imageFile instanceof File && imageFile.size > 0) {
+    const upload = await uploadProductImageFile(existing.slug, imageFile)
+    if ("error" in upload) {
+      redirect(`/admin/products/${productId}?error=${upload.error}`)
+    }
+    finalImageUrl = upload.url
+  } else if (imageUrl) {
     if (!isPublicProductImageUrl(imageUrl)) {
       redirect(`/admin/products/${productId}?error=invalid-image`)
     }
+    finalImageUrl = normalizeProductImageUrl(imageUrl)
+  }
 
-    const normalizedUrl = normalizeProductImageUrl(imageUrl)
-
+  if (finalImageUrl) {
     await prisma.productImage.deleteMany({ where: { productId } })
     await prisma.productImage.create({
-      data: { productId, url: normalizedUrl, sortOrder: 0, isPrimary: true },
+      data: { productId, url: finalImageUrl, sortOrder: 0, isPrimary: true },
     })
   }
 

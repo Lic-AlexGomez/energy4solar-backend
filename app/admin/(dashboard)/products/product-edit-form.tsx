@@ -1,21 +1,41 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { updateProductAction, type AdminProductEdit } from "./actions"
 import { DEFAULT_PRODUCT_IMAGE } from "@/lib/product-image-url"
 
 export function ProductEditForm({
   product,
   siteUrl,
+  storageEnabled,
 }: {
   product: AdminProductEdit
   siteUrl: string
+  storageEnabled: boolean
 }) {
   const [imageUrl, setImageUrl] = useState(product.imageUrl)
-  const previewUrl = imageUrl.trim() || DEFAULT_PRODUCT_IMAGE
+  const [filePreview, setFilePreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (filePreview) URL.revokeObjectURL(filePreview)
+    }
+  }, [filePreview])
+
+  const previewUrl = filePreview || (imageUrl.trim() || DEFAULT_PRODUCT_IMAGE)
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (filePreview) URL.revokeObjectURL(filePreview)
+    if (file) {
+      setFilePreview(URL.createObjectURL(file))
+    } else {
+      setFilePreview(null)
+    }
+  }
 
   return (
-    <form action={updateProductAction} className="admin-form admin-form-wide admin-product-edit">
+    <form action={updateProductAction} className="admin-form admin-form-wide admin-product-edit" encType="multipart/form-data">
       <input type="hidden" name="productId" value={product.id} />
 
       <div className="admin-product-edit-layout">
@@ -102,6 +122,27 @@ export function ProductEditForm({
             />
           </div>
 
+          {storageEnabled ? (
+            <label>
+              Upload photo
+              <input
+                name="imageFile"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                onChange={onFileChange}
+              />
+            </label>
+          ) : (
+            <p className="admin-hint admin-hint-warn">
+              File upload is off — set <code>SUPABASE_SERVICE_ROLE_KEY</code> on the backend to enable Supabase Storage.
+            </p>
+          )}
+          <p className="admin-hint">
+            {storageEnabled
+              ? "Upload saves to Supabase Storage (max 4 MB). Or paste an external URL below."
+              : "Paste a public image URL below."}
+          </p>
+
           <label>
             Image URL
             <input
@@ -112,7 +153,7 @@ export function ProductEditForm({
               onChange={(e) => setImageUrl(e.target.value)}
             />
           </label>
-          <p className="admin-hint">Use a public HTTPS URL (BigBattery uploads, CDN, etc.). Zoho document links are not allowed.</p>
+          <p className="admin-hint">If you upload a file, it takes priority over the URL field on save.</p>
 
           <div className="admin-product-edit-toggles">
             <label className="admin-checkbox">
