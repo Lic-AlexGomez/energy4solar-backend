@@ -11,6 +11,7 @@ export function SyncTriggerButton() {
     <div>
       <button
         type="button"
+        className="admin-btn"
         disabled={pending}
         onClick={() =>
           start(async () => {
@@ -23,19 +24,10 @@ export function SyncTriggerButton() {
             }
           })
         }
-        style={{
-          padding: "0.6rem 1rem",
-          borderRadius: 8,
-          border: "none",
-          background: pending ? "#64748b" : "#22c55e",
-          color: "#052e16",
-          fontWeight: 600,
-          cursor: pending ? "wait" : "pointer",
-        }}
       >
         {pending ? "Syncing…" : "Force sync now"}
       </button>
-      {message ? <p style={{ marginTop: "0.5rem", fontSize: "0.875rem" }}>{message}</p> : null}
+      {message ? <p className="admin-sync-message">{message}</p> : null}
     </div>
   )
 }

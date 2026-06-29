@@ -9,6 +9,7 @@ const backendPublicUrl = (
 const nextConfig: NextConfig = {
   assetPrefix:
     process.env.NODE_ENV === "production" && backendPublicUrl ? backendPublicUrl : undefined,
+  serverExternalPackages: ["ssh2", "ssh2-sftp-client"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.zoho.com" },

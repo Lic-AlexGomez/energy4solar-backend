@@ -665,6 +665,36 @@
   word-break: break-all;
 }
 
+.admin-sync-desc {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  color: var(--admin-muted);
+  line-height: 1.55;
+  max-width: 52ch;
+}
+
+.admin-sync-message {
+  margin: 0.65rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--admin-accent-text);
+}
+
+.admin-media-import {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.admin-media-import-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--admin-muted-2);
+}
+
+.admin-media-import-hint code {
+  font-size: 0.7rem;
+  color: var(--admin-muted);
+}
+
 .admin-stat-card {
   padding: 0.85rem 1rem;
   border-radius: var(--admin-radius);
