@@ -695,6 +695,41 @@
   color: var(--admin-muted);
 }
 
+.admin-btn-disabled {
+  opacity: 0.75;
+  border-style: dashed;
+}
+
+.admin-media-setup {
+  padding: 0.85rem 1rem;
+  border-radius: var(--admin-radius-sm);
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.admin-media-setup-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--admin-warn);
+}
+
+.admin-media-setup-list {
+  margin: 0.65rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.75rem;
+  color: var(--admin-muted);
+  line-height: 1.6;
+}
+
+.admin-media-setup-list code {
+  color: var(--admin-accent-text);
+}
+
+.admin-media-import-ready {
+  color: var(--admin-accent-text);
+}
+
 .admin-stat-card {
   padding: 0.85rem 1rem;
   border-radius: var(--admin-radius);
