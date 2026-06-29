@@ -906,6 +906,12 @@
   min-width: 220px;
 }
 
+.col-edit {
+  width: 96px;
+  text-align: center !important;
+  white-space: nowrap;
+}
+
 .col-visible {
   width: 56px;
   text-align: center !important;

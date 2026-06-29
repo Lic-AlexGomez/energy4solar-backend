@@ -20,7 +20,7 @@ export default async function AdminProductsPage({
       <header className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Products</h1>
-          <p className="admin-subtitle">Affiliate links and shop visibility</p>
+          <p className="admin-subtitle">Edit product info, photos, affiliate links and visibility</p>
         </div>
         <div className="admin-toolbar-metrics">
           <span>

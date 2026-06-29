@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useState, useTransition } from "react"
 import {
   resetAffiliateUrlAction,
@@ -33,6 +32,7 @@ export function ProductsTable({
             <th className="col-price">Price</th>
             <th className="col-clicks">Clicks</th>
             <th className="col-link">Referrer link</th>
+            <th className="col-edit">Info</th>
             <th className="col-visible">Visible</th>
           </tr>
         </thead>
@@ -58,11 +58,8 @@ function ProductRow({ row, siteUrl }: { row: AdminProductRow; siteUrl: string })
           </span>
           <span className="admin-product-meta">
             {row.sku ? <code>{row.sku}</code> : null}
-            <Link href={`/admin/products/${row.id}`} className="admin-link-sm">
-              Edit
-            </Link>
             <a href={`${siteUrl}/product/${row.slug}`} target="_blank" rel="noreferrer" className="admin-link-sm">
-              View
+              View on site
             </a>
           </span>
         </div>
@@ -79,6 +76,11 @@ function ProductRow({ row, siteUrl }: { row: AdminProductRow; siteUrl: string })
               resetAffiliateUrlAction(fd)
             })
           } />
+      </td>
+      <td className="col-edit">
+        <a href={`/admin/products/${row.id}`} className="admin-btn admin-btn-sm" title="Edit name, price, description and image">
+          Edit info
+        </a>
       </td>
       <td className="col-visible">
         <form action={(fd) => startTransition(() => toggleProductVisibilityAction(fd))}>
@@ -118,7 +120,7 @@ function AffiliateUrlCell({
           {truncateUrl(row.effectiveUrl)}
         </span>
         <button type="button" className="admin-icon-btn" onClick={() => setEditing(true)} disabled={pending}>
-          Edit
+          Change link
         </button>
       </div>
     )
