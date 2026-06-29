@@ -12,9 +12,24 @@ export async function triggerSyncAction() {
 }
 
 export async function importMediaImagesAction() {
-  const result = await importProductImagesFromMediaStorage()
-  revalidatePath("/admin/sync")
-  revalidatePath("/admin")
-  revalidatePath("/admin/products")
-  return result
+  try {
+    const result = await importProductImagesFromMediaStorage()
+    if (result.ok) {
+      revalidatePath("/admin/sync")
+      revalidatePath("/admin")
+      revalidatePath("/admin/products")
+    }
+    return result
+  } catch (err) {
+    return {
+      ok: false,
+      configured: true,
+      message: err instanceof Error ? err.message : "Import failed unexpectedly",
+      filesScanned: 0,
+      productsChecked: 0,
+      matched: 0,
+      updated: 0,
+      stillMissing: 0,
+    }
+  }
 }

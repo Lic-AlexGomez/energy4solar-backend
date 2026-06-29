@@ -5,6 +5,14 @@ import { filterPublicProductImageUrls } from "@/lib/product-image-url"
 import { skuLookupVariants } from "@/modules/woocommerce/catalog"
 
 const IMAGE_EXT = /\.(webp|jpe?g|png|gif|avif)$/i
+const MAX_FILES = 25_000
+const UPLOAD_PATH_CANDIDATES = [
+  "/wp-content/uploads",
+  "wp-content/uploads",
+  "/srv/htdocs/wp-content/uploads",
+  "/htdocs/wp-content/uploads",
+  "/sites/*/wp-content/uploads",
+]
 
 export type MediaImportResult = {
   ok: boolean
@@ -65,23 +73,52 @@ function publicUrlForFile(config: MediaImportConfig, remotePath: string): string
 
 type FileEntry = { remotePath: string; publicUrl: string; basename: string }
 
-async function listRemoteImages(config: MediaImportConfig): Promise<FileEntry[]> {
-  if (config.protocol === "ftp") {
-    return listFtpImages(config)
+function isDirectoryEntry(type: string | undefined): boolean {
+  return type === "d" || type === "D"
+}
+
+async function resolveSftpUploadRoot(sftp: SftpClient, config: MediaImportConfig): Promise<string> {
+  const candidates = [
+    config.remoteRoot,
+    ...UPLOAD_PATH_CANDIDATES.filter((p) => p !== config.remoteRoot && !p.includes("*")),
+  ]
+
+  for (const path of candidates) {
+    try {
+      const entries = await sftp.list(path)
+      if (entries.length > 0) return path.replace(/\/$/, "")
+    } catch {
+      /* try next */
+    }
   }
-  return listSftpImages(config)
+
+  try {
+    const cwd = await sftp.cwd()
+    const fromCwd = `${cwd}/wp-content/uploads`.replace(/\/+/g, "/")
+    const entries = await sftp.list(fromCwd)
+    if (entries.length > 0) return fromCwd.replace(/\/$/, "")
+  } catch {
+    /* fall through */
+  }
+
+  throw new Error(
+    `Uploads folder not found. Set MEDIA_IMPORT_REMOTE_PATH (tried ${candidates.join(", ")}).`,
+  )
 }
 
 async function listSftpImages(config: MediaImportConfig): Promise<FileEntry[]> {
   const sftp = new SftpClient()
   const files: FileEntry[] = []
 
-  async function walk(dir: string) {
+  async function walk(dir: string, depth: number) {
+    if (files.length >= MAX_FILES) return
     const entries = await sftp.list(dir)
     for (const entry of entries) {
+      if (files.length >= MAX_FILES) break
       const remotePath = `${dir}/${entry.name}`.replace(/\/+/g, "/")
-      if (entry.type === "d") {
-        await walk(remotePath)
+      if (isDirectoryEntry(entry.type)) {
+        if (depth === 0 && /^\d{4}$/.test(entry.name) && Number(entry.name) < 2023) continue
+        if (depth < 6) await walk(remotePath, depth + 1)
         continue
       }
       if (!IMAGE_EXT.test(entry.name)) continue
@@ -99,9 +136,12 @@ async function listSftpImages(config: MediaImportConfig): Promise<FileEntry[]> {
       port: config.port,
       username: config.user,
       password: config.password,
-      readyTimeout: 20_000,
+      readyTimeout: 25_000,
+      retries: 1,
+      retry_factor: 2,
     })
-    await walk(config.remoteRoot)
+    const root = await resolveSftpUploadRoot(sftp, config)
+    await walk(root, 0)
   } finally {
     await sftp.end().catch(() => {})
   }
@@ -113,12 +153,14 @@ async function listFtpImages(config: MediaImportConfig): Promise<FileEntry[]> {
   const client = new FtpClient(30_000)
   const files: FileEntry[] = []
 
-  async function walk(dir: string) {
+  async function walk(dir: string, depth: number) {
+    if (files.length >= MAX_FILES) return
     const entries = await client.list(dir)
     for (const entry of entries) {
+      if (files.length >= MAX_FILES) break
       const remotePath = `${dir}/${entry.name}`.replace(/\/+/g, "/")
       if (entry.isDirectory) {
-        await walk(remotePath)
+        if (depth < 6) await walk(remotePath, depth + 1)
         continue
       }
       if (!IMAGE_EXT.test(entry.name)) continue
@@ -138,12 +180,17 @@ async function listFtpImages(config: MediaImportConfig): Promise<FileEntry[]> {
       password: config.password,
       secure: process.env.MEDIA_IMPORT_SECURE !== "false",
     })
-    await walk(config.remoteRoot)
+    await walk(config.remoteRoot, 0)
   } finally {
     client.close()
   }
 
   return files
+}
+
+async function listRemoteImages(config: MediaImportConfig): Promise<FileEntry[]> {
+  if (config.protocol === "ftp") return listFtpImages(config)
+  return listSftpImages(config)
 }
 
 function buildImageIndex(files: FileEntry[]): Map<string, string> {
@@ -197,13 +244,25 @@ export function isMediaImportConfigured(): boolean {
   return getMediaImportConfig() != null
 }
 
+const emptyResult = (partial: Partial<MediaImportResult>): MediaImportResult => ({
+  ok: false,
+  configured: true,
+  message: "Import failed",
+  filesScanned: 0,
+  productsChecked: 0,
+  matched: 0,
+  updated: 0,
+  stillMissing: 0,
+  ...partial,
+})
+
 export async function importProductImagesFromMediaStorage(): Promise<MediaImportResult> {
   const config = getMediaImportConfig()
   if (!config) {
     return {
       ok: false,
       configured: false,
-      message: "Media import is not configured. Add MEDIA_IMPORT_* environment variables on the backend.",
+      message: "Media import is not configured.",
       filesScanned: 0,
       productsChecked: 0,
       matched: 0,
@@ -212,44 +271,52 @@ export async function importProductImagesFromMediaStorage(): Promise<MediaImport
     }
   }
 
-  const files = await listRemoteImages(config)
-  const index = buildImageIndex(files)
+  try {
+    const files = await listRemoteImages(config)
+    const index = buildImageIndex(files)
 
-  const products = await prisma.product.findMany({
-    where: { sku: { not: null } },
-    select: { id: true, sku: true, images: { select: { url: true } } },
-    orderBy: { sku: "asc" },
-  })
-
-  let matched = 0
-  let updated = 0
-
-  for (const product of products) {
-    if (!product.sku?.trim()) continue
-    const hasPublicImage = filterPublicProductImageUrls(product.images.map((i) => i.url)).length > 0
-    if (hasPublicImage) continue
-
-    const url = matchImageUrl(product.sku, index, files)
-    if (!url) continue
-    matched += 1
-
-    await prisma.productImage.deleteMany({ where: { productId: product.id } })
-    await prisma.productImage.create({
-      data: { productId: product.id, url, sortOrder: 0, isPrimary: true },
+    const products = await prisma.product.findMany({
+      where: { NOT: { sku: null } },
+      select: { id: true, sku: true, images: { select: { url: true } } },
+      orderBy: { sku: "asc" },
     })
-    updated += 1
-  }
 
-  const stillMissing = await prisma.product.count({ where: { images: { none: {} } } })
+    let matched = 0
+    let updated = 0
 
-  return {
-    ok: true,
-    configured: true,
-    message: `Linked ${updated} product image(s) from media storage.`,
-    filesScanned: files.length,
-    productsChecked: products.length,
-    matched,
-    updated,
-    stillMissing,
+    for (const product of products) {
+      if (!product.sku?.trim()) continue
+      const hasPublicImage = filterPublicProductImageUrls(product.images.map((i) => i.url)).length > 0
+      if (hasPublicImage) continue
+
+      const url = matchImageUrl(product.sku, index, files)
+      if (!url) continue
+      matched += 1
+
+      await prisma.productImage.deleteMany({ where: { productId: product.id } })
+      await prisma.productImage.create({
+        data: { productId: product.id, url, sortOrder: 0, isPrimary: true },
+      })
+      updated += 1
+    }
+
+    const stillMissing = await prisma.product.count({ where: { images: { none: {} } } })
+
+    return {
+      ok: true,
+      configured: true,
+      message: `Linked ${updated} product image(s) from media storage.`,
+      filesScanned: files.length,
+      productsChecked: products.length,
+      matched,
+      updated,
+      stillMissing,
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return emptyResult({
+      configured: true,
+      message: `Import failed: ${message}`,
+    })
   }
 }

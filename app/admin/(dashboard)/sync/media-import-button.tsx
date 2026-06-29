@@ -1,7 +1,14 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { importMediaImagesAction } from "./actions"
+
+type ImportResult = {
+  ok: boolean
+  message: string
+  filesScanned?: number
+  updated?: number
+  stillMissing?: number
+}
 
 export function MediaImportButton({ configured }: { configured: boolean }) {
   const [pending, start] = useTransition()
@@ -21,13 +28,22 @@ export function MediaImportButton({ configured }: { configured: boolean }) {
     setError(null)
     start(async () => {
       try {
-        const result = await importMediaImagesAction()
+        const res = await fetch("/api/admin/media-import", {
+          method: "POST",
+          credentials: "include",
+        })
+        const body = (await res.json()) as { data?: ImportResult; error?: { message?: string } }
+        if (!res.ok) {
+          setError(body.error?.message ?? `Import failed (${res.status})`)
+          return
+        }
+        const result = body.data!
         if (!result.ok) {
           setError(result.message)
           return
         }
         setMessage(
-          `${result.message} Scanned ${result.filesScanned.toLocaleString()} files · ${result.updated} updated · ${result.stillMissing} still without image.`,
+          `${result.message} Scanned ${(result.filesScanned ?? 0).toLocaleString()} files · ${result.updated ?? 0} updated · ${result.stillMissing ?? 0} still without image.`,
         )
       } catch (e) {
         setError(e instanceof Error ? e.message : "Import failed")
