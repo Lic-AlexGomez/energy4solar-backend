@@ -1,11 +1,18 @@
 const ZOHO_DOCUMENT_PATTERN = /zohoapis\.com\/books\/v3\/documents\//i
 
 /** URLs that work in the browser without Zoho auth. */
+export function normalizeProductImageUrl(url: string): string {
+  if (!url?.trim()) return url
+  return url.replace(/(\/wp-content\/uploads)+/gi, "/wp-content/uploads")
+}
+
+/** URLs that work in the browser without Zoho auth. */
 export function isPublicProductImageUrl(url: string | null | undefined): url is string {
   if (!url?.trim()) return false
-  if (ZOHO_DOCUMENT_PATTERN.test(url)) return false
+  const normalized = normalizeProductImageUrl(url)
+  if (ZOHO_DOCUMENT_PATTERN.test(normalized)) return false
   try {
-    const parsed = new URL(url)
+    const parsed = new URL(normalized)
     return parsed.protocol === "https:" || parsed.protocol === "http:"
   } catch {
     return false
@@ -13,7 +20,7 @@ export function isPublicProductImageUrl(url: string | null | undefined): url is 
 }
 
 export function filterPublicProductImageUrls(urls: string[]): string[] {
-  return urls.filter(isPublicProductImageUrl)
+  return urls.map(normalizeProductImageUrl).filter(isPublicProductImageUrl)
 }
 
 export const DEFAULT_PRODUCT_IMAGE =

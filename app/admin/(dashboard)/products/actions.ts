@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getEffectiveAffiliateUrl } from "@/lib/affiliate-url"
-import { isPublicProductImageUrl } from "@/lib/product-image-url"
+import { isPublicProductImageUrl, normalizeProductImageUrl } from "@/lib/product-image-url"
 import { buildSearchDocument, tokenizeSearch } from "@/modules/sync/product.mapper"
 import type { AdminProductSort } from "./products-query"
 import { parseAdminProductSort } from "./products-query"
@@ -271,9 +271,11 @@ export async function updateProductAction(formData: FormData) {
       redirect(`/admin/products/${productId}?error=invalid-image`)
     }
 
+    const normalizedUrl = normalizeProductImageUrl(imageUrl)
+
     await prisma.productImage.deleteMany({ where: { productId } })
     await prisma.productImage.create({
-      data: { productId, url: imageUrl, sortOrder: 0, isPrimary: true },
+      data: { productId, url: normalizedUrl, sortOrder: 0, isPrimary: true },
     })
   }
 

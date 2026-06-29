@@ -1,8 +1,15 @@
 import { Client as FtpClient } from "basic-ftp"
 import SftpClient from "ssh2-sftp-client"
 import { prisma } from "@/lib/prisma"
-import { filterPublicProductImageUrls } from "@/lib/product-image-url"
+import { filterPublicProductImageUrls, isPublicProductImageUrl, normalizeProductImageUrl } from "@/lib/product-image-url"
 import { skuLookupVariants } from "@/modules/woocommerce/catalog"
+
+function hasValidStoredImage(urls: string[]): boolean {
+  return urls.some((url) => {
+    const normalized = normalizeProductImageUrl(url)
+    return isPublicProductImageUrl(normalized) && normalized === url.trim()
+  })
+}
 
 const IMAGE_EXT = /\.(webp|jpe?g|png|gif|avif)$/i
 const MAX_FILES = 25_000
@@ -61,14 +68,26 @@ function getMediaImportConfig(): MediaImportConfig | null {
 }
 
 function publicUrlForFile(config: MediaImportConfig, remotePath: string): string {
-  const normalized = remotePath.replace(/\\/g, "/")
+  let normalized = remotePath.replace(/\\/g, "/").replace(/\/+/g, "/")
+  if (!normalized.startsWith("/")) normalized = `/${normalized}`
+
   const marker = "/wp-content/uploads"
-  const idx = normalized.toLowerCase().indexOf(marker)
-  const relative =
-    idx >= 0
-      ? normalized.slice(idx + marker.length).replace(/^\//, "")
-      : normalized.replace(new RegExp(`^${config.remoteRoot.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/?`), "")
-  return `${config.publicBase}/${relative}`
+  const lower = normalized.toLowerCase()
+  const idx = lower.lastIndexOf(marker)
+
+  let relative: string
+  if (idx >= 0) {
+    relative = normalized.slice(idx + marker.length).replace(/^\//, "")
+  } else {
+    const rootPattern = config.remoteRoot.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    relative = normalized
+      .replace(new RegExp(`^${rootPattern}/?`, "i"), "")
+      .replace(/^\/wp-content\/uploads\/?/i, "")
+      .replace(/^wp-content\/uploads\/?/i, "")
+      .replace(/^\//, "")
+  }
+
+  return normalizeProductImageUrl(`${config.publicBase}/${relative}`)
 }
 
 type FileEntry = { remotePath: string; publicUrl: string; basename: string }
@@ -286,16 +305,17 @@ export async function importProductImagesFromMediaStorage(): Promise<MediaImport
 
     for (const product of products) {
       if (!product.sku?.trim()) continue
-      const hasPublicImage = filterPublicProductImageUrls(product.images.map((i) => i.url)).length > 0
+      const hasPublicImage = hasValidStoredImage(product.images.map((i) => i.url))
       if (hasPublicImage) continue
 
       const url = matchImageUrl(product.sku, index, files)
       if (!url) continue
       matched += 1
 
+      const normalizedUrl = normalizeProductImageUrl(url)
       await prisma.productImage.deleteMany({ where: { productId: product.id } })
       await prisma.productImage.create({
-        data: { productId: product.id, url, sortOrder: 0, isPrimary: true },
+        data: { productId: product.id, url: normalizedUrl, sortOrder: 0, isPrimary: true },
       })
       updated += 1
     }
