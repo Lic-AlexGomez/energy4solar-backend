@@ -17,6 +17,13 @@
     "test-images": "tsx scripts/test-image-resolve.ts -- --limit=10",
     "seed-blog": "tsx scripts/seed-blog.ts",
     "setup-product-storage": "tsx scripts/setup-product-storage.ts",
+    "db-size-report": "tsx scripts/db-size-report.ts",
+    "db-size-public": "tsx scripts/db-size-public.ts",
+    "export-energy4solar": "tsx scripts/export-energy4solar.ts",
+    "import-energy4solar": "tsx scripts/import-energy4solar.ts",
+    "purge-energy4solar": "tsx scripts/purge-energy4solar.ts",
+    "restore-to-new-db": "tsx scripts/restore-to-new-db.ts",
+    "migrate-new-supabase": "tsx scripts/migrate-new-supabase.ts",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
@@ -26,6 +33,7 @@
     "basic-ftp": "^6.0.1",
     "cloudinary": "^2.10.0",
     "next": "^16.2.6",
+    "pg": "^8.22.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "ssh2-sftp-client": "^12.1.1",
