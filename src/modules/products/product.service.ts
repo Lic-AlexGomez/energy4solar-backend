@@ -96,7 +96,7 @@ export const productService = {
       if (params.maxPrice != null) where.price.lte = params.maxPrice
     }
 
-    const orderBy: Prisma.ProductOrderByWithRelationInput =
+    const primaryOrderBy: Prisma.ProductOrderByWithRelationInput =
       params.sort === "price-asc"
         ? { price: "asc" }
         : params.sort === "price-desc"
@@ -106,6 +106,14 @@ export const productService = {
             : params.sort === "newest"
               ? { createdAt: "desc" }
               : { energyScore: "desc" }
+
+    // Add a unique tiebreaker (id) so cursor pagination is stable. Without it,
+    // ties on non-unique fields (e.g. energyScore) silently skip products
+    // across page boundaries and most of the catalog disappears from the shop.
+    const orderBy: Prisma.ProductOrderByWithRelationInput[] = [
+      primaryOrderBy,
+      { id: "asc" },
+    ]
 
     const items = await prisma.product.findMany({
       where,
