@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { serializeProduct } from "@/modules/products/product.service"
+import { parseCapacityKwh } from "@/lib/capacity"
 import type { Prisma } from "@prisma/client"
 
 const finderInclude = {
@@ -13,14 +14,24 @@ const finderInclude = {
   seo: true,
 } satisfies Prisma.ProductInclude
 
+const APPLICATION_LABELS: Record<string, string> = {
+  home: "whole-home backup",
+  rv: "RV & van life",
+  cabin: "off-grid cabin",
+  marine: "marine",
+  commercial: "commercial",
+}
+
 export const finderService = {
   async recommend(input: {
     application: string
     budget?: number
     capacityKwh?: number
     backupDays?: number
+    voltage?: string
   }) {
     const targetCapacity = input.capacityKwh ?? (input.backupDays ?? 1) * 24
+    const voltagePref = input.voltage && input.voltage !== "any" ? input.voltage : undefined
 
     const products = await prisma.product.findMany({
       where: {
@@ -28,24 +39,44 @@ export const finderService = {
         isVisible: true,
         ...(input.application ? { compatibility: { has: input.application } } : {}),
         ...(input.budget ? { price: { lte: input.budget } } : {}),
+        ...(voltagePref ? { voltage: { contains: voltagePref.replace(/V/i, ""), mode: "insensitive" } } : {}),
       },
       orderBy: { energyScore: "desc" },
       take: 50,
       include: finderInclude,
     })
 
+    const appLabel = APPLICATION_LABELS[input.application] ?? input.application
+
     return products
       .map((p) => {
-        const cap = parseFloat(p.capacity ?? "0") || 0
+        const cap = parseCapacityKwh(p.capacity, p.voltage) ?? 0
         const diff = Math.abs(cap - targetCapacity)
-        return {
-          product: serializeProduct(p),
-          diff,
-          reasoning: `Sized for ~${targetCapacity} kWh target (${input.application} use). Capacity delta ${diff.toFixed(1)} kWh.`,
+        // Weighted fit: closeness to target capacity, budget headroom, quality.
+        const capacityFit = 1 - Math.min(1, diff / Math.max(targetCapacity, 1))
+        const budgetFit = input.budget ? Math.min(1, input.budget / Math.max(Number(p.price), 1)) : 1
+        const score = capacityFit * 40 + Math.min(budgetFit, 1) * 25 + (p.energyScore / 100) * 35
+
+        const reasons: string[] = []
+        if (cap > 0) {
+          reasons.push(`Delivers ~${cap} kWh, a close match for your ~${round1(targetCapacity)} kWh ${appLabel} target.`)
+        } else {
+          reasons.push(`Recommended for ${appLabel}.`)
         }
+        if (input.budget && Number(p.price) <= input.budget) {
+          reasons.push(`Within your $${input.budget.toLocaleString()} budget.`)
+        }
+        if (voltagePref) reasons.push(`Matches your ${voltagePref} system.`)
+        if (p.energyScore >= 85) reasons.push("Top-rated Energy4Solar Score.")
+
+        return { product: serializeProduct(p), score, reasoning: reasons.join(" ") }
       })
-      .sort((a, b) => a.diff - b.diff)
+      .sort((a, b) => b.score - a.score)
       .slice(0, 3)
       .map(({ product, reasoning }) => ({ product, reasoning }))
   },
+}
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10
 }

@@ -3,6 +3,15 @@ import { NotFoundError } from "@/lib/errors"
 import type { Prisma } from "@prisma/client"
 import { getEffectiveAffiliateUrl } from "@/lib/affiliate-url"
 import { filterPublicProductImageUrls, resolveProductImageUrl } from "@/lib/product-image-url"
+import { parseCapacityKwh } from "@/lib/capacity"
+
+/** Federal ITC (30%) generally applies to storage/solar/inverter installs. */
+const ITC_ELIGIBLE_CATEGORIES = new Set(["home-batteries", "solar-panels", "inverters"])
+const ITC_RATE = 0.3
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100
+}
 
 const productInclude = {
   brand: true,
@@ -20,6 +29,15 @@ export type ProductWithRelations = Prisma.ProductGetPayload<{ include: typeof pr
 export function serializeProduct(p: ProductWithRelations) {
   const imageUrls = filterPublicProductImageUrls(p.images.map((i) => i.url))
   const image = resolveProductImageUrl(p.images.map((i) => i.url))
+
+  const price = Number(p.price)
+  const categorySlug = p.category?.slug ?? ""
+  const capacityKwh = parseCapacityKwh(p.capacity, p.voltage)
+  const pricePerKwh = capacityKwh && capacityKwh > 0 ? round2(price / capacityKwh) : null
+  const pricePerCycle = p.cycleLife && p.cycleLife > 0 ? round2(price / p.cycleLife) : null
+  const itcEligible = ITC_ELIGIBLE_CATEGORIES.has(categorySlug)
+  const netPriceAfterItc = itcEligible ? round2(price * (1 - ITC_RATE)) : price
+
   return {
     id: p.id,
     slug: p.slug,
@@ -32,8 +50,13 @@ export function serializeProduct(p: ProductWithRelations) {
     images: imageUrls.length ? imageUrls : [image],
     capacity: p.capacity ?? "",
     voltage: p.voltage ?? "",
-    price: Number(p.price),
+    price,
     oldPrice: p.oldPrice ? Number(p.oldPrice) : undefined,
+    capacityKwh,
+    pricePerKwh,
+    pricePerCycle,
+    netPriceAfterItc,
+    itcEligible,
     rating: p.rating,
     reviews: p.reviewCount,
     description: p.description,
@@ -68,6 +91,9 @@ export function serializeProduct(p: ProductWithRelations) {
           metaTitle: p.seo.metaTitle,
           metaDescription: p.seo.metaDescription,
           keywords: p.seo.keywords,
+          canonicalUrl: p.seo.canonicalUrl,
+          ogImage: p.seo.ogImage,
+          noIndex: p.seo.noIndex,
         }
       : undefined,
     lastSyncedAt: p.lastSyncedAt.toISOString(),
@@ -80,6 +106,7 @@ export const productService = {
     limit?: number
     category?: string
     brand?: string
+    useCase?: string
     inStock?: boolean
     sort?: "featured" | "price-asc" | "price-desc" | "rating" | "newest"
     minPrice?: number
@@ -89,6 +116,7 @@ export const productService = {
     const where: Prisma.ProductWhereInput = { isVisible: true }
     if (params.category) where.category = { slug: params.category }
     if (params.brand) where.brand = { slug: params.brand }
+    if (params.useCase) where.compatibility = { has: params.useCase }
     if (params.inStock != null) where.inStock = params.inStock
     if (params.minPrice != null || params.maxPrice != null) {
       where.price = {}

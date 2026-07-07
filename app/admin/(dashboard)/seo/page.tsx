@@ -40,6 +40,22 @@ export default async function AdminSeoPage() {
               defaultValue={p.seo?.keywords.join(", ") ?? ""}
               style={inputStyle}
             />
+            <input
+              name="canonicalUrl"
+              placeholder="Canonical URL (optional)"
+              defaultValue={p.seo?.canonicalUrl ?? ""}
+              style={inputStyle}
+            />
+            <input
+              name="ogImage"
+              placeholder="OG image URL (optional)"
+              defaultValue={p.seo?.ogImage ?? ""}
+              style={inputStyle}
+            />
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem" }}>
+              <input type="checkbox" name="noIndex" defaultChecked={p.seo?.noIndex ?? false} />
+              noindex (hide from search engines)
+            </label>
             <button type="submit" style={buttonStyle}>
               Save SEO
             </button>

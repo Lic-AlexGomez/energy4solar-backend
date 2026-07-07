@@ -31,6 +31,7 @@ function serializeGuide(g: {
   readTime: string
   difficulty: string
   publishedAt: Date | null
+  relatedProductSlugs?: string[]
   category: { name: string; slug: string } | null
   seo: { metaTitle: string | null; metaDescription: string | null; keywords: string[] } | null
 }) {
@@ -44,6 +45,7 @@ function serializeGuide(g: {
     readTime: g.readTime,
     difficulty: g.difficulty,
     category: g.category?.name ?? "Guide",
+    relatedProductSlugs: g.relatedProductSlugs ?? [],
     publishedAt: g.publishedAt?.toISOString(),
     seo: g.seo
       ? {

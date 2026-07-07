@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "sync": "tsx scripts/run-sync.ts",
+    "backfill-taxonomy": "tsx scripts/backfill-taxonomy.ts",
     "enrich-images": "tsx scripts/enrich-images.ts",
     "enrich-images:og": "tsx scripts/enrich-images.ts -- --og-fallback",
     "enrich-images:fix": "tsx scripts/enrich-images.ts -- --fix-broken --og-fallback",

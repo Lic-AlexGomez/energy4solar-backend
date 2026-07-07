@@ -8,6 +8,7 @@ export const paginationSchema = z.object({
 export const productListSchema = paginationSchema.extend({
   category: z.string().optional(),
   brand: z.string().optional(),
+  useCase: z.enum(["home", "rv", "cabin", "marine", "commercial"]).optional(),
   inStock: z
     .enum(["true", "false"])
     .optional()
@@ -31,6 +32,7 @@ export const finderSchema = z.object({
   budget: z.coerce.number().positive().optional(),
   capacityKwh: z.coerce.number().positive().optional(),
   backupDays: z.coerce.number().positive().optional(),
+  voltage: z.enum(["any", "12V", "24V", "48V"]).optional(),
 })
 
 export const affiliateClickSchema = z.object({

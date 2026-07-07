@@ -11,11 +11,14 @@ export async function saveProductSeoAction(formData: FormData) {
     .split(",")
     .map((k) => k.trim())
     .filter(Boolean)
+  const canonicalUrl = String(formData.get("canonicalUrl") ?? "") || null
+  const ogImage = String(formData.get("ogImage") ?? "") || null
+  const noIndex = formData.get("noIndex") === "on"
 
   await prisma.productSEO.upsert({
     where: { productId },
-    create: { productId, metaTitle, metaDescription, keywords },
-    update: { metaTitle, metaDescription, keywords },
+    create: { productId, metaTitle, metaDescription, keywords, canonicalUrl, ogImage, noIndex },
+    update: { metaTitle, metaDescription, keywords, canonicalUrl, ogImage, noIndex },
   })
   revalidatePath("/admin/seo")
 }
