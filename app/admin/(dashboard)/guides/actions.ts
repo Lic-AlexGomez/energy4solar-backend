@@ -10,6 +10,10 @@ export async function saveGuideAction(formData: FormData) {
   const excerpt = String(formData.get("excerpt") ?? "")
   const content = String(formData.get("content") ?? "")
   const published = formData.get("published") === "on"
+  const relatedProductSlugs = String(formData.get("relatedProductSlugs") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
 
   const slug = slugify(title)
 
@@ -21,6 +25,7 @@ export async function saveGuideAction(formData: FormData) {
         excerpt,
         content,
         published,
+        relatedProductSlugs,
         publishedAt: published ? new Date() : null,
       },
     })
@@ -32,6 +37,7 @@ export async function saveGuideAction(formData: FormData) {
         excerpt,
         content,
         published,
+        relatedProductSlugs,
         publishedAt: published ? new Date() : null,
       },
     })

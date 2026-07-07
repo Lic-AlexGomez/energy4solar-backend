@@ -111,8 +111,27 @@ async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Prom
 
   const existing = await prisma.product.findUnique({
     where: { zohoItemId: mapped.zohoItemId },
-    select: { id: true, price: true, slug: true, affiliateUrlOverride: true, contentLocked: true },
+    select: {
+      id: true,
+      price: true,
+      slug: true,
+      affiliateUrlOverride: true,
+      contentLocked: true,
+      compatibility: true,
+      idealUseCases: true,
+      pros: true,
+      cons: true,
+    },
   })
+
+  // Only backfill derived taxonomy when it's still empty, so future manual
+  // admin overrides are never clobbered by a subsequent sync.
+  const taxonomyUpdate = {
+    ...(existing?.compatibility?.length ? {} : { compatibility: mapped.compatibility }),
+    ...(existing?.idealUseCases?.length ? {} : { idealUseCases: mapped.idealUseCases }),
+    ...(existing?.pros?.length ? {} : { pros: mapped.pros }),
+    ...(existing?.cons?.length ? {} : { cons: mapped.cons }),
+  }
 
   const slug =
     existing?.slug ??
@@ -145,6 +164,7 @@ async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Prom
                 warranty: mapped.warranty,
                 cycleLife: mapped.cycleLife,
                 weightLbs: mapped.weightLbs,
+                ...taxonomyUpdate,
               }),
           sku: mapped.sku,
           inStock: mapped.inStock,
@@ -180,6 +200,10 @@ async function upsertZohoItem(item: ZohoItem, wooCatalog: WooImageCatalog): Prom
           cycleLife: mapped.cycleLife,
           weightLbs: mapped.weightLbs,
           energyScore: mapped.energyScore,
+          compatibility: mapped.compatibility,
+          idealUseCases: mapped.idealUseCases,
+          pros: mapped.pros,
+          cons: mapped.cons,
           zohoRaw: mapped.zohoRaw,
         },
       })

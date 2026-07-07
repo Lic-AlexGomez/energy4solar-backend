@@ -1,6 +1,8 @@
 import { getEnv } from "@/config/env"
 import type { ZohoItem } from "@/modules/zoho/types"
 import { slugify } from "@/lib/slug"
+import { deriveProductTaxonomy } from "./product-taxonomy"
+import { computeEnergyScore } from "./energy-score"
 
 const CATEGORY_MAP: Record<string, string> = {
   battery: "home-batteries",
@@ -47,6 +49,18 @@ export function mapZohoItemToProductData(item: ZohoItem, categoryId: string, bra
   const stock = item.stock_on_hand ?? 0
   const sku = item.sku?.trim() || undefined
 
+  const categorySlug = inferCategorySlug(item)
+  const chemistry = extractCustomField(item, /chem|lifepo|nmc/i) ?? "LiFePO4"
+  const warranty = extractCustomField(item, /warranty/i) ?? "10 years"
+  const cycleLife = parseInt(extractCustomField(item, /cycle/i) ?? "6000", 10) || 6000
+  const capacity = extractCustomField(item, /capacity|kwh/i)
+  const voltage = extractCustomField(item, /voltage|volt/i)
+  const inStock = stock > 0 || item.status !== "inactive"
+  const taxonomy = deriveProductTaxonomy({ categorySlug, name: item.name, chemistry, cycleLife, warranty })
+  // Rating/reviews are unknown at sync time (editorial), so the score reflects
+  // value-per-dollar, cycles, warranty and availability; it lifts as reviews land.
+  const energyScore = computeEnergyScore({ price, capacity, voltage, cycleLife, warranty, inStock })
+
   return {
     zohoItemId: String(item.item_id),
     sku,
@@ -55,20 +69,24 @@ export function mapZohoItemToProductData(item: ZohoItem, categoryId: string, bra
     shortDescription: (item.description ?? "").slice(0, 280) || item.name,
     description: item.description ?? item.name,
     price,
-    inStock: stock > 0 || item.status !== "inactive",
+    inStock,
     stockOnHand: stock,
     affiliateUrl: buildAffiliateUrl(sku, String(item.item_id)),
     manufacturerUrl: sku ? `https://bigbattery.com/products/${sku.toLowerCase()}` : "https://bigbattery.com/shop",
     categoryId,
     brandId,
     zohoRaw: item as object,
-    capacity: extractCustomField(item, /capacity|kwh/i),
-    voltage: extractCustomField(item, /voltage|volt/i),
-    chemistry: extractCustomField(item, /chem|lifepo|nmc/i) ?? "LiFePO4",
-    warranty: extractCustomField(item, /warranty/i) ?? "10 years",
-    cycleLife: parseInt(extractCustomField(item, /cycle/i) ?? "6000", 10) || 6000,
+    capacity,
+    voltage,
+    chemistry,
+    warranty,
+    cycleLife,
     weightLbs: parseFloat(extractCustomField(item, /weight|lbs/i) ?? "0") || undefined,
-    energyScore: computeEnergyScore(item),
+    energyScore,
+    compatibility: taxonomy.compatibility,
+    idealUseCases: taxonomy.idealUseCases,
+    pros: taxonomy.pros,
+    cons: taxonomy.cons,
     images: [] as string[],
     features: defaultFeatures(item),
     specifications: defaultSpecs(item),
@@ -80,13 +98,6 @@ function extractCustomField(item: ZohoItem, pattern: RegExp): string | undefined
   return hit?.value != null ? String(hit.value) : undefined
 }
 
-function computeEnergyScore(item: ZohoItem): number {
-  let score = 70
-  if ((item.stock_on_hand ?? 0) > 0) score += 5
-  if (item.description && item.description.length > 100) score += 5
-  if (item.sku) score += 5
-  return Math.min(99, score)
-}
 
 function defaultFeatures(item: ZohoItem): string[] {
   return [

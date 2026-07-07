@@ -45,6 +45,10 @@ export default async function AdminGuidesPage() {
             Content (Markdown)
             <textarea name="content" placeholder="# Guide title..." required rows={10} />
           </label>
+          <label>
+            Related product slugs (comma-separated)
+            <input name="relatedProductSlugs" placeholder="12v-100ah-lifepo4, 48v-server-rack" />
+          </label>
           <label className="admin-checkbox">
             <input type="checkbox" name="published" />
             Publish immediately

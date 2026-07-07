@@ -207,6 +207,7 @@ model Guide {
   publishedAt DateTime?
   categoryId  String?
   category    GuideCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  relatedProductSlugs String[] @default([])
   seo         GuideSEO?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -278,6 +279,24 @@ model SitePageview {
   @@index([createdAt])
   @@index([sessionId])
   @@index([path])
+  @@schema("energy4solar")
+}
+
+// ─── Microconversion events (finder, compare, search, guide→product) ────────
+
+model Event {
+  id         String   @id @default(cuid())
+  type       String // finder_complete | compare_view | search | guide_product_click | ...
+  sessionId  String?
+  path       String?
+  productId  String?
+  query      String? // for search events
+  resultCount Int? // for search events (0 = content gap)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([query])
   @@schema("energy4solar")
 }
 
