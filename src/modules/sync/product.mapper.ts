@@ -4,20 +4,21 @@ import { slugify } from "@/lib/slug"
 import { deriveProductTaxonomy } from "./product-taxonomy"
 import { computeEnergyScore } from "./energy-score"
 
-const CATEGORY_MAP: Record<string, string> = {
-  battery: "home-batteries",
-  batteries: "home-batteries",
-  portable: "portable-power",
-  inverter: "inverters",
-  panel: "solar-panels",
-  solar: "solar-panels",
-  charger: "ev-chargers",
-}
+// Ordered most-specific-first: the first matching rule wins. "battery" is
+// checked LAST so a "portable power station" or "hybrid inverter" isn't
+// swallowed by the generic battery match.
+const CATEGORY_RULES: Array<{ slug: string; pattern: RegExp }> = [
+  { slug: "ev-chargers", pattern: /\bev\b|ev charger|ev-charger|evse|j1772|nacs|charging station|level 2/i },
+  { slug: "portable-power", pattern: /portable|power station|solar generator|\bgenerator\b|power pack|off[-\s]?grid kit/i },
+  { slug: "inverters", pattern: /inverter|charge controller|\bmppt\b|hybrid inverter|power center/i },
+  { slug: "solar-panels", pattern: /solar panel|\bpanel\b|photovoltaic|\bpv\b|solar module|monocrystalline/i },
+  { slug: "home-batteries", pattern: /batter|lifepo4|\blfp\b|\bkwh\b|server rack|\brack\b|powerwall|wall[-\s]?mount|\bess\b/i },
+]
 
 export function inferCategorySlug(item: ZohoItem): string {
-  const hay = `${item.name} ${item.sku ?? ""} ${item.product_type ?? ""} ${(item.tags ?? []).join(" ")}`.toLowerCase()
-  for (const [key, slug] of Object.entries(CATEGORY_MAP)) {
-    if (hay.includes(key)) return slug
+  const hay = `${item.name} ${item.sku ?? ""} ${item.product_type ?? ""} ${(item.tags ?? []).join(" ")}`
+  for (const { slug, pattern } of CATEGORY_RULES) {
+    if (pattern.test(hay)) return slug
   }
   return "home-batteries"
 }

@@ -23,32 +23,60 @@ function loadEnvFile() {
 
 loadEnvFile()
 
+function titleCase(s: string) {
+  return s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 /**
- * Backfill derived taxonomy (compatibility / idealUseCases / pros / cons) for
- * products already in the DB, without waiting for a full Zoho sync. Only fills
- * fields that are currently empty, so manual admin overrides are preserved.
+ * Backfill for products already in the DB, without a full Zoho sync:
+ *  - re-infer the category from the stored zohoRaw (fixes everything having
+ *    been lumped into "home-batteries"),
+ *  - derive compatibility / idealUseCases / pros / cons,
+ *  - recompute the value-based Energy4Solar Score.
+ *
+ * Derived taxonomy is only written when empty OR when the category changed
+ * (its old values were derived from the wrong category); a real category change
+ * always refreshes them. Manual overrides on an unchanged category are kept.
  */
 async function main() {
   const { prisma } = await import("@/lib/prisma")
   const { deriveProductTaxonomy } = await import("@/modules/sync/product-taxonomy")
   const { computeEnergyScore } = await import("@/modules/sync/energy-score")
+  const { inferCategorySlug } = await import("@/modules/sync/product.mapper")
 
-  const products = await prisma.product.findMany({
-    include: { category: true },
-  })
+  const categoryIdBySlug = new Map<string, string>()
+  async function resolveCategoryId(slug: string) {
+    const cached = categoryIdBySlug.get(slug)
+    if (cached) return cached
+    const category = await prisma.category.upsert({
+      where: { slug },
+      create: { slug, name: titleCase(slug) },
+      update: {},
+    })
+    categoryIdBySlug.set(slug, category.id)
+    return category.id
+  }
+
+  const products = await prisma.product.findMany({ include: { category: true } })
 
   let updated = 0
+  let recategorized = 0
   for (const p of products) {
-    const categorySlug = p.category?.slug ?? "home-batteries"
+    const currentSlug = p.category?.slug ?? null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = p.zohoRaw as any
+    const newSlug =
+      raw && typeof raw.name === "string" ? inferCategorySlug(raw) : currentSlug ?? "home-batteries"
+    const categoryChanged = newSlug !== currentSlug
+
     const taxonomy = deriveProductTaxonomy({
-      categorySlug,
+      categorySlug: newSlug,
       name: p.name,
       chemistry: p.chemistry,
       cycleLife: p.cycleLife,
       warranty: p.warranty,
     })
 
-    // Recompute the value-based score using full DB data (rating/reviews/badge).
     const energyScore = computeEnergyScore({
       price: Number(p.price),
       capacity: p.capacity,
@@ -61,20 +89,34 @@ async function main() {
       badge: p.badge,
     })
 
+    const refreshTaxonomy = categoryChanged
     const data = {
-      ...(p.compatibility.length ? {} : { compatibility: taxonomy.compatibility }),
-      ...(p.idealUseCases.length ? {} : { idealUseCases: taxonomy.idealUseCases }),
-      ...(p.pros.length ? {} : { pros: taxonomy.pros }),
-      ...(p.cons.length ? {} : { cons: taxonomy.cons }),
+      ...(categoryChanged ? { categoryId: await resolveCategoryId(newSlug) } : {}),
+      ...(refreshTaxonomy || !p.compatibility.length ? { compatibility: taxonomy.compatibility } : {}),
+      ...(refreshTaxonomy || !p.idealUseCases.length ? { idealUseCases: taxonomy.idealUseCases } : {}),
+      ...(refreshTaxonomy || !p.pros.length ? { pros: taxonomy.pros } : {}),
+      ...(refreshTaxonomy || !p.cons.length ? { cons: taxonomy.cons } : {}),
       ...(energyScore !== p.energyScore ? { energyScore } : {}),
     }
 
     if (Object.keys(data).length === 0) continue
     await prisma.product.update({ where: { id: p.id }, data })
     updated += 1
+    if (categoryChanged) recategorized += 1
   }
 
-  console.log(`[backfill-taxonomy] Updated ${updated}/${products.length} products.`)
+  // Refresh cached product counts per brand (categories are counted live by API).
+  const brands = await prisma.brand.findMany({ select: { id: true } })
+  for (const b of brands) {
+    await prisma.brand.update({
+      where: { id: b.id },
+      data: { productCount: await prisma.product.count({ where: { brandId: b.id } }) },
+    })
+  }
+
+  console.log(
+    `[backfill-taxonomy] Updated ${updated}/${products.length} products (${recategorized} recategorized).`,
+  )
   process.exit(0)
 }
 
