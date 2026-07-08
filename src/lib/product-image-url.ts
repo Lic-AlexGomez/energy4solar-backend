@@ -26,7 +26,12 @@ export function filterPublicProductImageUrls(urls: string[]): string[] {
 export const DEFAULT_PRODUCT_IMAGE =
   "https://bigbattery.com/wp-content/uploads/2026/04/BigBattery-ALL-PRODUCT-IMAGES-1-1.webp"
 
+/** Generic BigBattery banner/catalog images that aren't a specific product shot. */
+const GENERIC_IMAGE_PATTERN = /ALL-PRODUCT-IMAGES|placeholder|banner|logo/i
+
 export function resolveProductImageUrl(urls: string[]): string {
   const valid = filterPublicProductImageUrls(urls)
-  return valid[0] ?? DEFAULT_PRODUCT_IMAGE
+  // Prefer a real product photo over a generic banner when both exist.
+  const specific = valid.find((u) => !GENERIC_IMAGE_PATTERN.test(u))
+  return specific ?? valid[0] ?? DEFAULT_PRODUCT_IMAGE
 }

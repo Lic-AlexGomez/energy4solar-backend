@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client"
 import { getEffectiveAffiliateUrl } from "@/lib/affiliate-url"
 import { filterPublicProductImageUrls, resolveProductImageUrl } from "@/lib/product-image-url"
 import { parseCapacityKwh } from "@/lib/capacity"
+import { retailerFromUrl } from "@/lib/retailer"
 
 /** Federal ITC (30%) generally applies to storage/solar/inverter installs. */
 const ITC_ELIGIBLE_CATEGORIES = new Set(["home-batteries", "solar-panels", "inverters"])
@@ -31,6 +32,8 @@ export function serializeProduct(p: ProductWithRelations) {
   const image = resolveProductImageUrl(p.images.map((i) => i.url))
 
   const price = Number(p.price)
+  const affiliateUrl = getEffectiveAffiliateUrl(p)
+  const retailer = retailerFromUrl(affiliateUrl)
   const categorySlug = p.category?.slug ?? ""
   const capacityKwh = parseCapacityKwh(p.capacity, p.voltage)
   const pricePerKwh = capacityKwh && capacityKwh > 0 ? round2(price / capacityKwh) : null
@@ -62,7 +65,8 @@ export function serializeProduct(p: ProductWithRelations) {
     description: p.description,
     shortDescription: p.shortDescription,
     badge: p.badge ?? undefined,
-    affiliateUrl: getEffectiveAffiliateUrl(p),
+    affiliateUrl,
+    retailer,
     manufacturerUrl: p.manufacturerUrl ?? undefined,
     specs: p.specifications.map((s) => ({ label: s.label, value: s.value })),
     features: p.features.map((f) => f.text),
