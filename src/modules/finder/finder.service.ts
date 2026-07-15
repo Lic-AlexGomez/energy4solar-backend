@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { serializeProduct } from "@/modules/products/product.service"
-import { parseCapacityKwh } from "@/lib/capacity"
+import { parseCapacityKwh, parseVolts, voltageClass } from "@/lib/capacity"
 import type { Prisma } from "@prisma/client"
 
 const finderInclude = {
@@ -20,6 +20,7 @@ const APPLICATION_LABELS: Record<string, string> = {
   cabin: "off-grid cabin",
   marine: "marine",
   commercial: "commercial",
+  "golf-cart": "golf cart",
 }
 
 export const finderService = {
@@ -32,6 +33,7 @@ export const finderService = {
   }) {
     const targetCapacity = input.capacityKwh ?? (input.backupDays ?? 1) * 24
     const voltagePref = input.voltage && input.voltage !== "any" ? input.voltage : undefined
+    const targetVoltClass = voltagePref ? voltageClass(parseVolts(voltagePref)) : null
 
     const products = await prisma.product.findMany({
       where: {
@@ -39,16 +41,18 @@ export const finderService = {
         isVisible: true,
         ...(input.application ? { compatibility: { has: input.application } } : {}),
         ...(input.budget ? { price: { lte: input.budget } } : {}),
-        ...(voltagePref ? { voltage: { contains: voltagePref.replace(/V/i, ""), mode: "insensitive" } } : {}),
       },
       orderBy: { energyScore: "desc" },
-      take: 50,
+      take: 80,
       include: finderInclude,
     })
 
     const appLabel = APPLICATION_LABELS[input.application] ?? input.application
 
     return products
+      // Exact voltage-class match (51.2V counts as 48V). Required when the user
+      // states a system voltage — critical for golf carts (36V vs 48V).
+      .filter((p) => !targetVoltClass || voltageClass(parseVolts(p.voltage)) === targetVoltClass)
       .map((p) => {
         const cap = parseCapacityKwh(p.capacity, p.voltage) ?? 0
         const diff = Math.abs(cap - targetCapacity)

@@ -25,8 +25,8 @@ export function parseCapacityKwh(
   if (/wh|watt.?hour/.test(text)) return round(num / 1000)
   // Ah → kWh needs voltage: kWh = Ah * V / 1000
   if (/ah|amp.?hour/.test(text)) {
-    const v = Number.parseFloat((voltage ?? "").replace(/[^0-9.]/g, ""))
-    if (Number.isFinite(v) && v > 0) return round((num * v) / 1000)
+    const v = parseVolts(voltage)
+    if (v && v > 0) return round((num * v) / 1000)
     return null
   }
   // Bare number: assume kWh (most home-battery specs are in kWh)
@@ -35,4 +35,34 @@ export function parseCapacityKwh(
 
 function round(n: number): number {
   return Math.round(n * 1000) / 1000
+}
+
+/** Parse a free-text voltage ("51.2 V", "48V", "36 volt") into a number of volts. */
+export function parseVolts(voltage?: string | null): number | null {
+  if (!voltage) return null
+  const v = Number.parseFloat(voltage.replace(/[^0-9.]/g, ""))
+  return Number.isFinite(v) && v > 0 ? v : null
+}
+
+/**
+ * Nominal voltage classes: real packs read slightly above nominal
+ * (e.g. a "48V" system is 51.2V LiFePO4). Snap a measured voltage to its class
+ * so 51.2 V matches a "48V" filter.
+ */
+export function voltageClass(volts: number | null): 12 | 24 | 36 | 48 | null {
+  if (!volts) return null
+  const classes: Array<12 | 24 | 36 | 48> = [12, 24, 36, 48]
+  let best: 12 | 24 | 36 | 48 | null = null
+  let bestDelta = Infinity
+  for (const c of classes) {
+    // nominal 12V pack ≈ 12.8V, 48V ≈ 51.2V → ~6.7% above nominal
+    const delta = Math.abs(volts - c * 1.0667)
+    const deltaNominal = Math.abs(volts - c)
+    const d = Math.min(delta, deltaNominal)
+    if (d < bestDelta && d <= 4) {
+      bestDelta = d
+      best = c
+    }
+  }
+  return best
 }

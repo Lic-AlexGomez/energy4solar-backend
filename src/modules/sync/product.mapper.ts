@@ -57,7 +57,7 @@ export function mapZohoItemToProductData(item: ZohoItem, categoryId: string, bra
   const capacity = extractCustomField(item, /capacity|kwh/i)
   const voltage = extractCustomField(item, /voltage|volt/i)
   const inStock = stock > 0 || item.status !== "inactive"
-  const taxonomy = deriveProductTaxonomy({ categorySlug, name: item.name, chemistry, cycleLife, warranty })
+  const taxonomy = deriveProductTaxonomy({ categorySlug, name: item.name, voltage, chemistry, cycleLife, warranty })
   // Rating/reviews are unknown at sync time (editorial), so the score reflects
   // value-per-dollar, cycles, warranty and availability; it lifts as reviews land.
   const energyScore = computeEnergyScore({ price, capacity, voltage, cycleLife, warranty, inStock })

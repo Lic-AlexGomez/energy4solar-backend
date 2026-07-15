@@ -72,6 +72,7 @@ async function main() {
     const taxonomy = deriveProductTaxonomy({
       categorySlug: newSlug,
       name: p.name,
+      voltage: p.voltage,
       chemistry: p.chemistry,
       cycleLife: p.cycleLife,
       warranty: p.warranty,

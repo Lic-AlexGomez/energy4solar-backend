@@ -11,7 +11,9 @@
  * Applications mirror the frontend `Application` union.
  */
 
-export type Application = "home" | "rv" | "cabin" | "marine" | "commercial"
+import { parseVolts, voltageClass } from "@/lib/capacity"
+
+export type Application = "home" | "rv" | "cabin" | "marine" | "commercial" | "golf-cart"
 
 const COMPATIBILITY_MAP: Record<string, Application[]> = {
   "home-batteries": ["home", "cabin", "commercial"],
@@ -27,10 +29,11 @@ const IDEAL_USE_CASES: Record<Application, string> = {
   cabin: "Off-grid cabin",
   marine: "Marine & dockside",
   commercial: "Peak shaving & demand charges",
+  "golf-cart": "Golf cart & LSV",
 }
 
-/** Derive which applications a product suits from its category (+ name hints). */
-export function deriveCompatibility(categorySlug: string, name = ""): Application[] {
+/** Derive which applications a product suits from its category, name & voltage. */
+export function deriveCompatibility(categorySlug: string, name = "", voltage?: string | null): Application[] {
   const base = COMPATIBILITY_MAP[categorySlug] ?? ["home"]
   const hay = name.toLowerCase()
   const extra = new Set<Application>(base)
@@ -40,6 +43,12 @@ export function deriveCompatibility(categorySlug: string, name = ""): Applicatio
   if (/cabin|off[-\s]?grid/.test(hay)) extra.add("cabin")
   if (/commercial|industrial|rack|server/.test(hay)) extra.add("commercial")
   if (/home|house|residential|wall/.test(hay)) extra.add("home")
+  // Golf cart: explicit name, or a 36V/48V battery (the common cart voltages).
+  const vClass = voltageClass(parseVolts(voltage))
+  const isBattery = categorySlug === "home-batteries" || categorySlug === "portable-power"
+  if (/golf|\blsv\b|cart/.test(hay) || (isBattery && (vClass === 36 || vClass === 48))) {
+    extra.add("golf-cart")
+  }
   return [...extra]
 }
 
@@ -106,11 +115,12 @@ export function deriveProsCons(input: {
 export function deriveProductTaxonomy(input: {
   categorySlug: string
   name?: string
+  voltage?: string | null
   chemistry?: string | null
   cycleLife?: number | null
   warranty?: string | null
 }) {
-  const compatibility = deriveCompatibility(input.categorySlug, input.name)
+  const compatibility = deriveCompatibility(input.categorySlug, input.name, input.voltage)
   return {
     compatibility,
     idealUseCases: deriveIdealUseCases(compatibility),
