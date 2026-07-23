@@ -42,6 +42,7 @@ export function serializeProduct(p: ProductWithRelations) {
     id: p.id,
     slug: p.slug,
     name: p.name,
+    sku: p.sku ?? undefined,
     brand: p.brand?.name ?? "Unknown",
     brandId: p.brand?.slug ?? "",
     categoryId: p.category?.slug ?? "",
