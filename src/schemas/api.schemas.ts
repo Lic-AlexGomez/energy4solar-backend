@@ -28,7 +28,7 @@ export const compareSchema = z.object({
 })
 
 export const finderSchema = z.object({
-  application: z.enum(["home", "rv", "cabin", "marine", "commercial"]),
+  application: z.enum(["home", "rv", "cabin", "marine", "commercial", "golf-cart"]),
   budget: z.coerce.number().positive().optional(),
   capacityKwh: z.coerce.number().positive().optional(),
   backupDays: z.coerce.number().positive().optional(),
